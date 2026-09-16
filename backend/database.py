@@ -11,10 +11,11 @@ from typing import List, Dict, Any, Optional
 
 try:
     import psycopg2
-    from psycopg2.extras import RealDictCursor
+    from psycopg2.extras import RealDictCursor, execute_batch
 except ImportError:
     psycopg2 = None
     RealDictCursor = None
+    execute_batch = None
 
 # Auto-load .env if present
 def _load_env():
@@ -89,6 +90,10 @@ class PostgresCursorWrapper:
 
     def executemany(self, query: str, params_list):
         pg_query = self._convert_query(query)
+        if not params_list:
+            return
+        if execute_batch is not None:
+            return execute_batch(self.cursor, pg_query, params_list, page_size=1000)
         return self.cursor.executemany(pg_query, params_list)
 
     def fetchone(self):
