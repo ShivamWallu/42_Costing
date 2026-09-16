@@ -15,7 +15,7 @@ import datetime
 import sqlite3
 import json
 from typing import Optional, Dict, Any
-from database import get_db_connection, init_db
+from database import get_db_connection, init_db, is_postgres
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEFAULT_DEBIT_DIR = os.path.join(BASE_DIR, "Debit_Note_Sheet")
@@ -53,45 +53,47 @@ def format_date_str(val):
 def find_master_debit_file(directory: str) -> Optional[str]:
     if not os.path.exists(directory):
         return None
-    # Prefer the uploaded debit note master file
-    for f in os.listdir(directory):
-        if "Uploaded_Debit Note Sheet" in f and f.endswith(('.xlsx', '.xls')) and not f.startswith('~$'):
-            return os.path.join(directory, f)
-    files = [os.path.join(directory, f) for f in os.listdir(directory) if f.endswith(('.xlsx', '.xls')) and not f.startswith('~$')]
-    if not files:
+    valid_files = [
+        os.path.join(directory, f) for f in os.listdir(directory)
+        if f.endswith(('.xlsx', '.xls', '.csv')) and not f.startswith('~$')
+    ]
+    if not valid_files:
         return None
-    return max(files, key=os.path.getmtime)
+    # Sort files by modification time, newest first
+    valid_files.sort(key=os.path.getmtime, reverse=True)
+
+    # Prefer newest Uploaded file
+    uploaded_files = [f for f in valid_files if "Uploaded_" in os.path.basename(f)]
+    if uploaded_files:
+        return uploaded_files[0]
+
+    return valid_files[0]
 
 def find_lab_file(directory: str) -> Optional[str]:
     if not os.path.exists(directory):
         return None
-    for f in os.listdir(directory):
-        if "Lab Report" in f and f.endswith(('.xlsx', '.xls')) and not f.startswith('~$'):
-            return os.path.join(directory, f)
-    files = [os.path.join(directory, f) for f in os.listdir(directory) if f.endswith(('.xlsx', '.xls')) and not f.startswith('~$')]
+    files = [
+        os.path.join(directory, f) for f in os.listdir(directory)
+        if f.endswith(('.xlsx', '.xls')) and not f.startswith('~$')
+    ]
     if not files:
         return None
-    return max(files, key=os.path.getmtime)
+    files.sort(key=os.path.getmtime, reverse=True)
+    lab_files = [f for f in files if "Lab Report" in os.path.basename(f)]
+    if lab_files:
+        return lab_files[0]
+    return files[0]
 
 def populate(custom_debit_path: Optional[str] = None, custom_lab_path: Optional[str] = None) -> Dict[str, Any]:
-    # Ensure tables are clean
-    conn_pre = get_db_connection()
-    c_pre = conn_pre.cursor()
-    c_pre.execute("DROP TABLE IF EXISTS debit_note_records;")
-    conn_pre.commit()
-    conn_pre.close()
-
+    # Ensure database schema is initialized
     init_db()
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
+
     debit_path = custom_debit_path or find_master_debit_file(DEFAULT_DEBIT_DIR)
     lab_path = custom_lab_path or find_lab_file(DEFAULT_LAB_DIR)
-    
+
     if not debit_path or not os.path.exists(debit_path):
-        conn.close()
         return {"success": False, "error": f"Debit note file not found at {debit_path}"}
-        
+
     print(f"Loading Primary Master: {debit_path}")
     print(f"Loading Lab Enrichment: {lab_path}")
 
@@ -327,11 +329,40 @@ def populate(custom_debit_path: Optional[str] = None, custom_lab_path: Optional[
 
     wb_deb.close()
 
-    # Clear and recreate tables
-    cursor.execute("DROP TABLE IF EXISTS debit_note_records;")
-    cursor.execute("DROP TABLE IF EXISTS transactions;")
+    # Open DB connection
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    use_pg = is_postgres()
+
+    # Step 1: Check and rotate backup (Latest -> Previous Backup, older backups auto-deleted)
+    try:
+        cursor.execute("SELECT COUNT(*) FROM debit_note_records;")
+        active_count = cursor.fetchone()[0]
+    except Exception:
+        active_count = 0
+
+    if active_count > 0:
+        print(f"Creating rolling backup of current {active_count} active records...")
+        # Auto-delete any older backup tables so we only keep exactly 1 backup generation
+        cursor.execute("DROP TABLE IF EXISTS debit_note_records_backup;")
+        cursor.execute("DROP TABLE IF EXISTS transactions_backup;")
+        # Snapshot current active data into backup tables
+        cursor.execute("CREATE TABLE debit_note_records_backup AS SELECT * FROM debit_note_records;")
+        cursor.execute("CREATE TABLE transactions_backup AS SELECT * FROM transactions;")
+        print("Previous upload successfully preserved as backup.")
+
+    # Step 2: Ensure schema & indexes exist
     init_db()
 
+    # Step 3: Fast truncate of active tables (resets identities and clears active rows in milliseconds)
+    if use_pg:
+        cursor.execute("TRUNCATE TABLE debit_note_records RESTART IDENTITY CASCADE;")
+        cursor.execute("TRUNCATE TABLE transactions RESTART IDENTITY CASCADE;")
+    else:
+        cursor.execute("DELETE FROM debit_note_records;")
+        cursor.execute("DELETE FROM transactions;")
+
+    # Step 4: Bulk insert new records
     cursor.executemany("""
     INSERT INTO debit_note_records (
         s_no, gin, po_no, supplier_code, supplier_name, station, supervisor_name,
@@ -376,10 +407,92 @@ def populate(custom_debit_path: Optional[str] = None, custom_lab_path: Optional[
         "supervisor_pct": round(matched_supervisor_count / len(debit_insert_rows) * 100, 2),
         "oil_dual_compared": oil_comparison_count,
         "oil_mismatches_flagged": oil_variance_count,
-        "message": f"Successfully ingested and unified {len(debit_insert_rows)} records with Lab Report supervisor, broker, and dual oil comparisons."
+        "backup_retained": active_count > 0,
+        "message": f"Successfully ingested and unified {len(debit_insert_rows)} records. Previous upload kept as backup."
     }
     print(result)
     return result
+
+def restore_previous_backup() -> Dict[str, Any]:
+    """Restores debit_note_records and transactions from the previous backup."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    use_pg = is_postgres()
+
+    try:
+        cursor.execute("SELECT COUNT(*) FROM debit_note_records_backup;")
+        backup_dn = cursor.fetchone()[0]
+    except Exception:
+        backup_dn = 0
+
+    if not backup_dn or backup_dn == 0:
+        conn.close()
+        return {"success": False, "error": "No previous backup found in database."}
+
+    # Ensure schema exists
+    init_db()
+
+    if use_pg:
+        cursor.execute("TRUNCATE TABLE debit_note_records RESTART IDENTITY CASCADE;")
+        cursor.execute("TRUNCATE TABLE transactions RESTART IDENTITY CASCADE;")
+    else:
+        cursor.execute("DELETE FROM debit_note_records;")
+        cursor.execute("DELETE FROM transactions;")
+
+    cursor.execute("INSERT INTO debit_note_records SELECT * FROM debit_note_records_backup;")
+    cursor.execute("INSERT INTO transactions SELECT * FROM transactions_backup;")
+    conn.commit()
+    conn.close()
+
+    return {
+        "success": True,
+        "restored_records": backup_dn,
+        "message": f"Successfully restored {backup_dn} records from previous backup."
+    }
+
+def get_backup_and_storage_status(upload_dir: str = DEFAULT_DEBIT_DIR) -> Dict[str, Any]:
+    """Returns the current database records count, backup count, and disk files kept."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    active_count = 0
+    backup_count = 0
+    try:
+        cursor.execute("SELECT COUNT(*) FROM debit_note_records;")
+        active_count = cursor.fetchone()[0]
+    except Exception:
+        pass
+
+    try:
+        cursor.execute("SELECT COUNT(*) FROM debit_note_records_backup;")
+        backup_count = cursor.fetchone()[0]
+    except Exception:
+        pass
+
+    conn.close()
+
+    kept_files = []
+    if os.path.exists(upload_dir):
+        files = [
+            os.path.join(upload_dir, f) for f in os.listdir(upload_dir)
+            if f.endswith(('.xlsx', '.xls', '.csv')) and not f.startswith('~$')
+        ]
+        files.sort(key=os.path.getmtime, reverse=True)
+        for f in files:
+            kept_files.append({
+                "filename": os.path.basename(f),
+                "size_kb": round(os.path.getsize(f) / 1024, 1),
+                "modified": os.path.getmtime(f)
+            })
+
+    return {
+        "success": True,
+        "active_records": active_count,
+        "backup_records": backup_count,
+        "has_backup": backup_count > 0,
+        "kept_files": kept_files,
+        "policy": "2-Tier Retention: Latest Upload (Active) + Previous Upload (Backup). Older versions auto-deleted."
+    }
 
 if __name__ == "__main__":
     res = populate()

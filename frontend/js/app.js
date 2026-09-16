@@ -4518,6 +4518,49 @@ function setupUploadAndEmailHandlers() {
   const uploadStatusBox = document.getElementById('uploadStatusBox');
 
   let selectedFile = null;
+  const lblActiveRows = document.getElementById('lblActiveRows');
+  const lblBackupRows = document.getElementById('lblBackupRows');
+  const btnRestoreBackup = document.getElementById('btnRestoreBackup');
+
+  async function refreshStorageStatus() {
+    if (!lblActiveRows || !lblBackupRows) return;
+    try {
+      const res = await fetch('/api/debit-note/storage-status');
+      if (res.ok) {
+        const data = await res.json();
+        lblActiveRows.textContent = (data.active_records || 0).toLocaleString();
+        lblBackupRows.textContent = (data.backup_records || 0).toLocaleString();
+        if (btnRestoreBackup) {
+          btnRestoreBackup.style.display = data.has_backup ? 'inline-flex' : 'none';
+        }
+      }
+    } catch (e) {
+      console.warn('Storage status fetch skipped:', e);
+    }
+  }
+
+  btnRestoreBackup?.addEventListener('click', async () => {
+    if (!confirm('Kya aap pichli upload sheet ke backup par rollback karna chahte hain? Current data pichle backup se restore ho jayega.')) return;
+    btnRestoreBackup.disabled = true;
+    btnRestoreBackup.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Restoring...';
+    try {
+      const res = await fetch('/api/debit-note/rollback', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        alert(`✅ Rollback successful! Restored ${data.restored_records} records.`);
+        closeUpload();
+        refreshActiveView();
+      } else {
+        alert(`❌ Rollback failed: ${data.detail || data.error || 'Unknown error'}`);
+      }
+    } catch (err) {
+      alert(`Network error during rollback: ${err.message}`);
+    } finally {
+      btnRestoreBackup.disabled = false;
+      btnRestoreBackup.innerHTML = '<i class="fa-solid fa-rotate-left"></i> Restore Previous Backup';
+      refreshStorageStatus();
+    }
+  });
 
   if (btnOpenUpload && uploadModal) {
     btnOpenUpload.addEventListener('click', () => {
@@ -4526,6 +4569,7 @@ function setupUploadAndEmailHandlers() {
       selectedFile = null;
       btnSubmitUpload.disabled = true;
       selectedFileName.textContent = 'Supports .xlsx, .xls, .csv';
+      refreshStorageStatus();
     });
 
     const closeUpload = () => uploadModal.classList.remove('active');

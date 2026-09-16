@@ -3117,6 +3117,27 @@
       </div>
 
       <div class="modal-body" style="padding: 1.5rem;">
+        <!-- Auto-Retention Storage Protection Notice -->
+        <div style="background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: var(--radius-sm); padding: 0.75rem 1rem; margin-bottom: 1.25rem; font-size: 0.8rem; display: flex; align-items: flex-start; gap: 0.75rem;">
+          <i class="fa-solid fa-shield-halved" style="color: #38bdf8; font-size: 1.2rem; margin-top: 0.1rem;"></i>
+          <div style="flex: 1; line-height: 1.45;">
+            <div style="font-weight: 700; color: #38bdf8; display: flex; justify-content: space-between; align-items: center;">
+              <span>Auto-Clean Storage Policy Active</span>
+              <span style="font-size: 0.7rem; background: rgba(56, 189, 248, 0.2); color: #38bdf8; padding: 2px 6px; border-radius: 4px;">Zero Bloat</span>
+            </div>
+            <div style="color: var(--text-muted); font-size: 0.78rem; margin-top: 0.2rem;">
+              Database aur disk storage overflow se bachne ke liye <strong>sirf latest sheet</strong> aur <strong>previous sheet backup</strong> surakshit rehti hai. Purani sheets auto-delete hoti rahengi.
+            </div>
+            <div id="storageStatusSnippet" style="margin-top: 0.45rem; font-size: 0.75rem; color: var(--text-muted); display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; border-top: 1px dashed rgba(56, 189, 248, 0.2); padding-top: 0.4rem;">
+              <span>Active Data: <strong id="lblActiveRows" style="color: #34d399;">...</strong></span>
+              <span>Backup Copy: <strong id="lblBackupRows" style="color: #60a5fa;">...</strong></span>
+              <button id="btnRestoreBackup" type="button" style="background: none; border: none; color: #fbbf24; text-decoration: underline; cursor: pointer; padding: 0; font-size: 0.75rem; display: none;">
+                <i class="fa-solid fa-rotate-left"></i> Restore Previous Backup
+              </button>
+            </div>
+          </div>
+        </div>
+
         <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.25rem; line-height: 1.5;">
           Select your new daily updated <strong>Debit Note Sheet (.xlsx / .csv)</strong>. The system will automatically
           reconcile transactions, recalculate Landing Cost & 42 Costing for both MT and Quintals, and refresh the

@@ -21,7 +21,7 @@ from ml_analytics import (
 )
 from google_sheets_sync import sync_from_google_sheet, sync_from_csv_stream
 from email_service import send_weekly_42_costing_email, get_weekly_report_data
-from populate_debit_db import populate as populate_debit_db
+from populate_debit_db import populate as populate_debit_db, restore_previous_backup, get_backup_and_storage_status
 from models import DashboardKpiResponse, FilterOptionsResponse, FormulaTestRequest, FormulaTestResponse, SyncRequest
 
 app = FastAPI(
@@ -1542,9 +1542,36 @@ def send_email_report(payload: Dict[str, Any] = Body(default={})):
         raise HTTPException(status_code=500, detail=result.get("message", "Failed to send email"))
     return result
 
+def cleanup_old_debit_files(upload_dir: str, keep_count: int = 2) -> List[str]:
+    """
+    Retains only the latest `keep_count` uploaded Debit Note Excel/CSV files in the directory.
+    Auto-deletes all older files so disk storage never accumulates unneeded data.
+    """
+    try:
+        files = [
+            os.path.join(upload_dir, f) for f in os.listdir(upload_dir)
+            if f.endswith(('.xlsx', '.xls', '.csv')) and not f.startswith('~$')
+        ]
+        files.sort(key=os.path.getmtime, reverse=True)
+        deleted = []
+        for old_f in files[keep_count:]:
+            try:
+                os.remove(old_f)
+                deleted.append(os.path.basename(old_f))
+            except Exception as e:
+                print(f"Warning: could not delete {old_f}: {e}")
+        return deleted
+    except Exception as e:
+        print(f"File cleanup error: {e}")
+        return []
+
 @app.post("/api/debit-note/upload")
 async def upload_debit_note_sheet(file: UploadFile = File(...)):
-    """Uploads a new daily Debit Note Excel sheet, saves it, and reconciles the database."""
+    """
+    Uploads a new daily Debit Note Excel sheet.
+    Preserves current active data as 1-step backup, drops older backups,
+    and auto-deletes older Excel files on disk to permanently protect storage.
+    """
     if not file.filename.endswith(('.xlsx', '.xls', '.csv')):
         raise HTTPException(status_code=400, detail="Invalid file format. Please upload an Excel (.xlsx/.xls) or CSV file.")
     
@@ -1559,12 +1586,32 @@ async def upload_debit_note_sheet(file: UploadFile = File(...)):
     if not res.get("success"):
         raise HTTPException(status_code=500, detail=res.get("error", "Failed to process debit sheet"))
         
+    # Auto-cleanup disk files: keep latest 2 files (Latest upload + Previous backup), delete all older files
+    deleted_files = cleanup_old_debit_files(upload_dir, keep_count=2)
+    
+    total_records = res.get("total_records", res.get("total_rows", 0))
     return {
         "success": True,
-        "message": f"File '{file.filename}' uploaded and {res.get('total_rows', 0)} records processed successfully.",
+        "message": f"File '{file.filename}' processed successfully ({total_records:,} records). Previous upload stored as backup. Older files pruned: {len(deleted_files)}.",
         "filename": file.filename,
-        "total_rows": res.get("total_rows", 0)
+        "total_records": total_records,
+        "backup_retained": res.get("backup_retained", True),
+        "deleted_old_files": deleted_files
     }
+
+@app.get("/api/debit-note/storage-status")
+def get_debit_storage_status():
+    """Returns database active rows, backup table rows, kept disk files, and retention policy."""
+    upload_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "Debit_Note_Sheet")
+    return get_backup_and_storage_status(upload_dir=upload_dir)
+
+@app.post("/api/debit-note/rollback")
+def rollback_debit_note_backup():
+    """Rolls back debit_note_records and transactions to the previous backup generation."""
+    res = restore_previous_backup()
+    if not res.get("success"):
+        raise HTTPException(status_code=400, detail=res.get("error", "Failed to restore previous backup"))
+    return res
 
 # ==============================================================================
 # INDIA MUSTARD (SARSO) PRICE ANALYSIS & PREDICTION API ENDPOINTS
