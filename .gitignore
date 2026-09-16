@@ -1,0 +1,24 @@
+# Environment variables & Secrets
+.env
+.env.*
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+venv/
+env/
+ENV/
+
+# Large binaries & test artifacts
+ngrok.exe
+scratch/
+
+# OS / Editor temporary files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+.gemini/
