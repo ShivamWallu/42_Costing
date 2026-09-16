@@ -34,42 +34,27 @@ def _load_env():
 
 _load_env()
 
+from decimal import Decimal
+
 DB_PATH = os.path.join(os.path.dirname(__file__), "khandelia_costing.db")
 
-class PostgresRowWrapper:
-    """Wrapper around psycopg2 RealDictRow to support both dict key and tuple index access."""
+class PostgresRowWrapper(dict):
+    """Wrapper around psycopg2 RealDictRow to support both dict key and tuple index access, and auto-convert Decimal to float."""
     def __init__(self, dict_row):
-        self._data = dict(dict_row) if dict_row is not None else {}
-        self._keys = list(self._data.keys())
+        clean_data = {}
+        if dict_row is not None:
+            for k, v in dict_row.items():
+                if isinstance(v, Decimal):
+                    clean_data[k] = float(v)
+                else:
+                    clean_data[k] = v
+        super().__init__(clean_data)
+        self._keys = list(self.keys())
 
     def __getitem__(self, key):
         if isinstance(key, int):
-            return self._data[self._keys[key]]
-        return self._data.get(key)
-
-    def __contains__(self, key):
-        return key in self._data
-
-    def get(self, key, default=None):
-        return self._data.get(key, default)
-
-    def keys(self):
-        return self._data.keys()
-
-    def values(self):
-        return self._data.values()
-
-    def items(self):
-        return self._data.items()
-
-    def __iter__(self):
-        return iter(self._keys)
-
-    def __len__(self):
-        return len(self._data)
-
-    def __repr__(self):
-        return repr(self._data)
+            return self[self._keys[key]]
+        return super().__getitem__(key)
 
 class PostgresCursorWrapper:
     """Wrapper that translates SQLite '?' placeholders to PostgreSQL '%s' seamlessly."""
@@ -166,8 +151,26 @@ def init_db():
     conn = get_db_connection()
     cursor = conn.cursor()
     use_pg = is_postgres()
-    
     auto_id = "SERIAL PRIMARY KEY" if use_pg else "INTEGER PRIMARY KEY AUTOINCREMENT"
+
+    if use_pg:
+        # PostgreSQL polyfill: ROUND(double precision/real, integer) does not exist natively in PG.
+        # This polyfill allows standard SQLite-style ROUND(AVG(...), 2) to work flawlessly.
+        try:
+            cursor.execute("""
+            CREATE OR REPLACE FUNCTION round(val double precision, digits integer)
+            RETURNS numeric AS $$
+                SELECT round(val::numeric, digits);
+            $$ LANGUAGE sql IMMUTABLE;
+            """)
+            cursor.execute("""
+            CREATE OR REPLACE FUNCTION round(val real, digits integer)
+            RETURNS numeric AS $$
+                SELECT round(val::numeric, digits);
+            $$ LANGUAGE sql IMMUTABLE;
+            """)
+        except Exception as e:
+            print(f"Notice: PostgreSQL round polyfill warning: {e}")
     
     cursor.execute(f"""
     CREATE TABLE IF NOT EXISTS transactions (
