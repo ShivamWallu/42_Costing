@@ -20,7 +20,7 @@ from sklearn.ensemble import IsolationForest
 import json
 import sqlite3
 from typing import Dict, Any, List, Optional
-from database import get_db_connection
+from database import get_db_connection, is_postgres
 
 def run_anomaly_detection() -> Dict[str, Any]:
     """
@@ -257,7 +257,7 @@ def get_sourcing_rankings(
         LEFT JOIN transactions t ON d.gin = t.gin
         WHERE d.rec_wt_mt > 0 AND d.oil_nir > 0 AND d.cost_42_qtl > 0
         GROUP BY {entity_col}
-        HAVING total_lots >= 1
+        HAVING COUNT(*) >= 1
         ORDER BY {order_col} {order_dir}
     """
     
@@ -293,10 +293,13 @@ def get_weekly_supplier_breakdown() -> List[Dict[str, Any]]:
     """Groups transaction volume, NIR oil, and 42 costing by week and supplier."""
     conn = get_db_connection()
     cursor = conn.cursor()
+    use_pg = is_postgres()
     
-    cursor.execute("""
+    week_expr = "to_char(TO_DATE(NULLIF(grn_date, ''), 'YYYY-MM-DD'), 'YYYY-\"W\"IW')" if use_pg else "strftime('%Y-W%W', grn_date)"
+    
+    cursor.execute(f"""
         SELECT 
-            strftime('%Y-W%W', grn_date) as week_num,
+            {week_expr} as week_num,
             supplier_name,
             COUNT(*) as lot_count,
             ROUND(SUM(rec_wt) / 10.0, 2) as total_wt_mt,
@@ -306,7 +309,7 @@ def get_weekly_supplier_breakdown() -> List[Dict[str, Any]]:
             ROUND(AVG(cost_42) * 10.0, 2) as avg_cost_42_mt
         FROM transactions
         WHERE grn_date IS NOT NULL AND grn_date != '' AND supplier_name IS NOT NULL
-        GROUP BY week_num, supplier_name
+        GROUP BY {week_expr}, supplier_name
         ORDER BY week_num DESC, total_wt_mt DESC
         LIMIT 100
     """)
@@ -347,7 +350,15 @@ def get_no_bargain_supplier_alerts(dormancy_days: int = 14) -> List[Dict[str, An
     """
     conn = get_db_connection()
     cursor = conn.cursor()
+    use_pg = is_postgres()
     
+    if use_pg:
+        days_expr = "ROUND(CURRENT_DATE - MAX(TO_DATE(NULLIF(grn_date, ''), 'YYYY-MM-DD')))"
+        having_expr = f"MAX(TO_DATE(NULLIF(grn_date, ''), 'YYYY-MM-DD')) < (CURRENT_DATE - INTERVAL '{dormancy_days} days') OR MAX(grn_date) IS NULL"
+    else:
+        days_expr = "ROUND(JULIANDAY('now') - JULIANDAY(MAX(grn_date)))"
+        having_expr = f"MAX(grn_date) < date('now', '-{dormancy_days} days') OR MAX(grn_date) IS NULL"
+
     cursor.execute(f"""
         SELECT 
             supplier_name,
@@ -356,11 +367,11 @@ def get_no_bargain_supplier_alerts(dormancy_days: int = 14) -> List[Dict[str, An
             ROUND(SUM(rec_wt) / 10.0, 2) as total_volume_mt,
             ROUND(AVG(COALESCE(NULLIF(oil_analyzer, 0), oil_manual)), 2) as avg_oil_historical,
             MAX(grn_date) as last_trade_date,
-            ROUND(JULIANDAY('now') - JULIANDAY(MAX(grn_date))) as days_since_last_trade
+            {days_expr} as days_since_last_trade
         FROM transactions
         WHERE supplier_name IS NOT NULL
-        GROUP BY supplier_name
-        HAVING last_trade_date < date('now', '-{dormancy_days} days') OR last_trade_date IS NULL
+        GROUP BY supplier_name, station
+        HAVING {having_expr}
         ORDER BY total_volume_mt DESC
         LIMIT 20
     """)

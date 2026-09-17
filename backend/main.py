@@ -720,7 +720,7 @@ def get_data_quality_audit():
     cursor.execute("SELECT COUNT(*) FROM debit_note_records WHERE oil_mismatch_flag = 1")
     oil_mismatches_flagged = cursor.fetchone()[0]
 
-    cursor.execute("SELECT gin, COUNT(*) as cnt FROM transactions GROUP BY gin HAVING cnt > 1")
+    cursor.execute("SELECT gin, COUNT(*) as cnt FROM transactions GROUP BY gin HAVING COUNT(*) > 1")
     shared_gin_rows = cursor.fetchall()
     shared_gins_count = len(shared_gin_rows)
     split_rows_count = sum(r[1] for r in shared_gin_rows)

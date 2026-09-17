@@ -10,6 +10,7 @@ import sqlite3
 import os
 from typing import Dict, Any, List, Optional
 import datetime
+from database import get_db_connection, is_postgres
 
 # SMTP Configuration
 SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")
@@ -23,8 +24,7 @@ DB_PATH = os.path.join(os.path.dirname(__file__), "khandelia_costing.db")
 
 def get_weekly_report_data() -> Dict[str, Any]:
     """Extracts aggregated KPI, rankings, anomalies and dormancy alerts for the weekly report."""
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     # 1. Overall KPIs from debit_note_records
@@ -86,11 +86,18 @@ def get_weekly_report_data() -> Dict[str, Any]:
     quality_alerts = [dict(r) for r in cursor.fetchall()]
 
     # 5. Dormant Suppliers (No recent bargain / deal)
-    cursor.execute("""
+    use_pg = is_postgres()
+    if use_pg:
+        having_clause = "HAVING MAX(TO_DATE(NULLIF(grn_date, ''), 'YYYY-MM-DD')) < (CURRENT_DATE - INTERVAL '21 days') OR MAX(grn_date) IS NULL"
+    else:
+        having_clause = "HAVING MAX(grn_date) < date('now', '-21 days') OR MAX(grn_date) IS NULL"
+
+    cursor.execute(f"""
         SELECT supplier_name, MAX(grn_date) as last_seen, COUNT(*) as past_deals
         FROM transactions
+        WHERE supplier_name IS NOT NULL
         GROUP BY supplier_name
-        HAVING last_seen < date('now', '-21 days') OR last_seen IS NULL
+        {having_clause}
         ORDER BY past_deals DESC
         LIMIT 5
     """)
