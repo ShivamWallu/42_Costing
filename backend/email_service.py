@@ -318,6 +318,7 @@ def generate_weekly_report_html(data: Dict[str, Any]) -> str:
 def _send_via_google_webhook(target_email: str, subject: str, html_content: str) -> Dict[str, Any]:
     """Sends email via user's Google Apps Script Web App on HTTPS Port 443 (100% Free, Native Gmail)."""
     import requests
+    print(f"[EMAIL] [Google Webhook] Calling webhook URL: {GMAIL_WEBHOOK_URL[:45]}...")
     payload = {
         "recipient": target_email,
         "subject": subject,
@@ -332,6 +333,9 @@ def _send_via_google_webhook(target_email: str, subject: str, html_content: str)
         allow_redirects=True
     )
     
+    print(f"[EMAIL] [Google Webhook] Response Status: {response.status_code}")
+    print(f"[EMAIL] [Google Webhook] Response Body: {response.text[:300]}")
+
     if response.status_code not in (200, 201, 302):
         raise RuntimeError(f"Google Webhook returned HTTP {response.status_code}: {response.text[:200]}")
         
@@ -352,6 +356,7 @@ def _send_via_google_webhook(target_email: str, subject: str, html_content: str)
 
 def _send_via_resend(target_email: str, subject: str, html_content: str) -> Dict[str, Any]:
     """Sends email via Resend Cloud API on HTTPS Port 443."""
+    print(f"[EMAIL] [Resend] Dispatching email via Resend API...")
     from_email = os.getenv("RESEND_FROM", f"KOGM Analytics <onboarding@resend.dev>")
     payload = json.dumps({
         "from": from_email,
@@ -369,6 +374,8 @@ def _send_via_resend(target_email: str, subject: str, html_content: str) -> Dict
         }
     )
     with urllib.request.urlopen(req, timeout=20) as response:
+        res_body = response.read().decode("utf-8")
+        print(f"[EMAIL] [Resend] Success Response: {res_body}")
         return {
             "success": True,
             "channel": "Resend API (Port 443)",
@@ -379,6 +386,7 @@ def _send_via_resend(target_email: str, subject: str, html_content: str) -> Dict
 
 def _send_via_brevo(target_email: str, subject: str, html_content: str) -> Dict[str, Any]:
     """Sends email via Brevo (Sendinblue) Cloud API on HTTPS Port 443."""
+    print(f"[EMAIL] [Brevo] Dispatching email via Brevo API...")
     payload = json.dumps({
         "sender": {"name": "KOGM Analytics", "email": EMAIL_FROM},
         "to": [{"email": target_email}],
@@ -395,6 +403,8 @@ def _send_via_brevo(target_email: str, subject: str, html_content: str) -> Dict[
         }
     )
     with urllib.request.urlopen(req, timeout=20) as response:
+        res_body = response.read().decode("utf-8")
+        print(f"[EMAIL] [Brevo] Success Response: {res_body}")
         return {
             "success": True,
             "channel": "Brevo API (Port 443)",
@@ -405,6 +415,7 @@ def _send_via_brevo(target_email: str, subject: str, html_content: str) -> Dict[
 
 def _send_via_smtp(target_email: str, subject: str, html_content: str) -> Dict[str, Any]:
     """Sends email via direct Gmail SMTP (Works on local dev and unblocked cloud instances)."""
+    print(f"[EMAIL] [SMTP] Connecting to {SMTP_HOST}:{SMTP_PORT} as {SMTP_USER}...")
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
     msg["From"] = f"KOGM Analytics <{EMAIL_FROM}>"
@@ -418,6 +429,7 @@ def _send_via_smtp(target_email: str, subject: str, html_content: str) -> Dict[s
     server.login(SMTP_USER, SMTP_PASSWORD)
     server.sendmail(EMAIL_FROM, [target_email], msg.as_string())
     server.quit()
+    print(f"[EMAIL] [SMTP] Message sent successfully via Gmail SMTP!")
 
     return {
         "success": True,
@@ -436,6 +448,15 @@ def send_weekly_42_costing_email(recipient_email: Optional[str] = None) -> Dict[
     target_email = recipient_email.strip() if recipient_email else DEFAULT_TEST_EMAIL
     subject = f"📊 Weekly 42% Costing & Quality Analytics Report — KOGM Mashal ({datetime.date.today().strftime('%d %b %Y')})"
 
+    print("\n" + "=" * 65)
+    print(f"[EMAIL DISPATCH] Initiating report send to: '{target_email}'")
+    print(f"[EMAIL DISPATCH] Configuration:")
+    print(f"  - GMAIL_WEBHOOK_URL : {'Configured (' + GMAIL_WEBHOOK_URL[:30] + '...)' if GMAIL_WEBHOOK_URL else 'Not Configured (Empty)'}")
+    print(f"  - RESEND_API_KEY    : {'Configured' if RESEND_API_KEY else 'Not Configured (Empty)'}")
+    print(f"  - BREVO_API_KEY     : {'Configured' if BREVO_API_KEY else 'Not Configured (Empty)'}")
+    print(f"  - SMTP Target       : {SMTP_HOST}:{SMTP_PORT} ({SMTP_USER})")
+    print("=" * 65)
+
     try:
         data = get_weekly_report_data()
         html_content = generate_weekly_report_html(data)
@@ -443,35 +464,45 @@ def send_weekly_42_costing_email(recipient_email: Optional[str] = None) -> Dict[
         # 1. Prefer Google Apps Script Webhook on HTTPS Port 443 if configured
         if GMAIL_WEBHOOK_URL and GMAIL_WEBHOOK_URL.startswith("http"):
             try:
-                return _send_via_google_webhook(target_email, subject, html_content)
+                res = _send_via_google_webhook(target_email, subject, html_content)
+                print(f"[EMAIL DISPATCH] Result: SUCCESS via Google Webhook! Recipient: {target_email}")
+                return res
             except Exception as w_err:
-                print(f"Google Webhook failed: {w_err}. Falling back...")
+                print(f"[EMAIL DISPATCH] Google Webhook failed: {w_err}. Falling back to next channel...")
 
         # 2. Try Resend Cloud API on HTTPS Port 443 if configured
         if RESEND_API_KEY:
             try:
-                return _send_via_resend(target_email, subject, html_content)
+                res = _send_via_resend(target_email, subject, html_content)
+                print(f"[EMAIL DISPATCH] Result: SUCCESS via Resend! Recipient: {target_email}")
+                return res
             except Exception as r_err:
-                print(f"Resend API failed: {r_err}. Falling back...")
+                print(f"[EMAIL DISPATCH] Resend API failed: {r_err}. Falling back to next channel...")
 
         # 3. Try Brevo Cloud API on HTTPS Port 443 if configured
         if BREVO_API_KEY:
             try:
-                return _send_via_brevo(target_email, subject, html_content)
+                res = _send_via_brevo(target_email, subject, html_content)
+                print(f"[EMAIL DISPATCH] Result: SUCCESS via Brevo! Recipient: {target_email}")
+                return res
             except Exception as b_err:
-                print(f"Brevo API failed: {b_err}. Falling back...")
+                print(f"[EMAIL DISPATCH] Brevo API failed: {b_err}. Falling back to next channel...")
 
         # 4. Standard SMTP attempt (Local dev or open cloud hosts)
-        return _send_via_smtp(target_email, subject, html_content)
+        res = _send_via_smtp(target_email, subject, html_content)
+        print(f"[EMAIL DISPATCH] Result: SUCCESS via Gmail SMTP! Recipient: {target_email}")
+        return res
 
     except Exception as e:
         err_msg = str(e)
+        print(f"[EMAIL DISPATCH] Error encountered: {err_msg}")
         if "101" in err_msg or "Network is unreachable" in err_msg or "timed out" in err_msg.lower():
             hint = (
                 "Render Free Tier blocks raw SMTP port 587. "
                 "To send emails from Render, please add GMAIL_WEBHOOK_URL (Google Apps Script Web App) "
                 "or RESEND_API_KEY/BREVO_API_KEY to Render Environment Variables."
             )
+            print(f"[EMAIL DISPATCH] DIAGNOSIS: {hint}")
             return {
                 "success": False,
                 "error": err_msg,
