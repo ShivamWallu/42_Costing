@@ -339,12 +339,15 @@ def _send_via_google_webhook(target_email: str, subject: str, html_content: str)
     if response.status_code not in (200, 201, 302):
         raise RuntimeError(f"Google Webhook returned HTTP {response.status_code}: {response.text[:200]}")
         
+    res_data = {}
     try:
         res_data = response.json()
-        if res_data and res_data.get("success") is False:
-            raise RuntimeError(res_data.get("error", "Google Webhook execution returned failure"))
     except Exception:
-        pass # Some scripts return text/html on redirect, which is fine if status is 200
+        pass
+
+    if isinstance(res_data, dict) and res_data.get("success") is False:
+        err_detail = res_data.get("error", "Google Webhook execution returned failure")
+        raise RuntimeError(f"Google Webhook Error: {err_detail}")
 
     return {
         "success": True,
