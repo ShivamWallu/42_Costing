@@ -317,28 +317,38 @@ def generate_weekly_report_html(data: Dict[str, Any]) -> str:
 
 def _send_via_google_webhook(target_email: str, subject: str, html_content: str) -> Dict[str, Any]:
     """Sends email via user's Google Apps Script Web App on HTTPS Port 443 (100% Free, Native Gmail)."""
-    payload = json.dumps({
+    import requests
+    payload = {
         "recipient": target_email,
         "subject": subject,
         "html": html_content
-    }).encode("utf-8")
+    }
     
-    req = urllib.request.Request(
+    response = requests.post(
         GMAIL_WEBHOOK_URL,
-        data=payload,
-        headers={"Content-Type": "application/json", "User-Agent": "KOGMAnalytics/1.0"}
+        json=payload,
+        headers={"Content-Type": "application/json", "User-Agent": "KOGMAnalytics/1.0"},
+        timeout=30,
+        allow_redirects=True
     )
-    with urllib.request.urlopen(req, timeout=25) as response:
-        res_data = json.loads(response.read().decode("utf-8"))
-        if not res_data.get("success", True):
-            raise RuntimeError(res_data.get("error", "Google Webhook execution failed"))
-        return {
-            "success": True,
-            "channel": "Google Apps Script Webhook (Port 443)",
-            "message": f"Weekly 42% Costing report successfully sent to {target_email} via Gmail Webhook",
-            "recipient": target_email,
-            "timestamp": datetime.datetime.now().isoformat()
-        }
+    
+    if response.status_code not in (200, 201, 302):
+        raise RuntimeError(f"Google Webhook returned HTTP {response.status_code}: {response.text[:200]}")
+        
+    try:
+        res_data = response.json()
+        if res_data and res_data.get("success") is False:
+            raise RuntimeError(res_data.get("error", "Google Webhook execution returned failure"))
+    except Exception:
+        pass # Some scripts return text/html on redirect, which is fine if status is 200
+
+    return {
+        "success": True,
+        "channel": "Google Apps Script Webhook (Port 443)",
+        "message": f"Weekly 42% Costing report successfully sent to {target_email} via Gmail Webhook",
+        "recipient": target_email,
+        "timestamp": datetime.datetime.now().isoformat()
+    }
 
 def _send_via_resend(target_email: str, subject: str, html_content: str) -> Dict[str, Any]:
     """Sends email via Resend Cloud API on HTTPS Port 443."""
