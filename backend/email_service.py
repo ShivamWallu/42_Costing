@@ -25,7 +25,7 @@ EMAIL_FROM = os.getenv("EMAIL_FROM", "itchd.kogm@gmail.com")
 DEFAULT_TEST_EMAIL = os.getenv("TEST_EMAIL", "khandelia@yopmail.com")
 
 # HTTPS Webhook & API Relays (Bypasses Render Free Tier raw SMTP port 587 block)
-GMAIL_WEBHOOK_URL = os.getenv("GMAIL_WEBHOOK_URL", "")
+GMAIL_WEBHOOK_URL = os.getenv("GMAIL_WEBHOOK_URL", "https://script.google.com/macros/s/AKfycbzh5OuK7ZDEqF4mN6EHcX25q4EA-JZq6njv3uzrnCH8SsxLFS4HNqvl3Q2w74A56HNaiw/exec")
 RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
 BREVO_API_KEY = os.getenv("BREVO_API_KEY", "")
 
