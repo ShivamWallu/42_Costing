@@ -8,24 +8,60 @@ import datetime
 import re
 
 STATION_MAP = {
-    "sgnr": "Sri Ganganagar",
-    "sri ganganagar": "Sri Ganganagar",
-    "sriganganagar": "Sri Ganganagar",
-    "raisinghnagar": "Raisinghnagar",
-    "padampur": "Padampur",
-    "kajuwala": "Kajuwala",
-    "kesrisinghpur": "Kesrisinghpur",
-    "suratgarh": "Suratgarh",
-    "anupgarh": "Anupgarh",
-    "gharsana": "Gharsana",
-    "rawatsar": "Rawatsar",
-    "hanumangarh": "Hanumangarh",
-    "pilibanga": "Pilibanga",
-    "sadulshahar": "Sadulshahar",
-    "vijaynagar": "Vijaynagar",
-    "jaipur": "Jaipur",
-    "alwar": "Alwar",
-    "bharatpur": "Bharatpur"
+    # Sri Ganganagar / SGNR
+    r'^(sgnr|sri\s*ganganagar|sriganganagar)$': "Sri Ganganagar",
+    # Lalgarh Jattan (including SGNR (Lalgarh Jatan), Lalagarh, etc.)
+    r'.*lal.*garh\s*jatt?an.*': "Lalgarh Jattan",
+    # Rawla Mandi (including RAWLA, Rawla, SGNR (Rawla Mandi))
+    r'.*rawla.*': "Rawla Mandi",
+    # Jaipur
+    r'^jaipur$': "Jaipur",
+    # Churu
+    r'^churu$': "Churu",
+    # Sadulshahar (Sadulsahar / Sadulshahar)
+    r'^sadul\s*sh?ahar$': "Sadulshahar",
+    # Anupgarh (Anoopgarh / Anupgarh)
+    r'^an[ou]+pgarh$': "Anupgarh",
+    # Sri Karanpur / Karanpur
+    r'.*karanpur.*': "Sri Karanpur",
+    # Sri Bijaynagar / Vijaynagar
+    r'.*(bijaynagar|vijaynagar).*': "Sri Bijaynagar",
+    # Gharsana / New Gharsana
+    r'.*gharsana.*': "Gharsana",
+    # Raisinghnagar
+    r'.*raisinghnagar.*': "Raisinghnagar",
+    # Padampur
+    r'.*padampur.*': "Padampur",
+    # Kajuwala
+    r'.*kajuwala.*': "Kajuwala",
+    # Bikaner
+    r'.*bikaner.*': "Bikaner",
+    # Gajsinghpur
+    r'.*gajsinghpur.*': "Gajsinghpur",
+    # Hanumangarh
+    r'.*hanumangarh.*': "Hanumangarh",
+    # Rawatsar
+    r'.*rawatsar.*': "Rawatsar",
+    # Kesrisinghpur
+    r'.*kesrisinghpur.*': "Kesrisinghpur",
+    # Lunkaransar
+    r'.*lunkaransar.*': "Lunkaransar",
+    # Nohar
+    r'.*nohar.*': "Nohar",
+    # Goluwala
+    r'.*goluwala.*': "Goluwala",
+    # Sangaria
+    r'.*sangaria.*': "Sangaria",
+    # Sadulpur
+    r'.*sadulpur.*': "Sadulpur",
+    # Suratgarh
+    r'.*suratgarh.*': "Suratgarh",
+    # Pilibanga
+    r'.*pilibanga.*': "Pilibanga",
+    # Alwar
+    r'.*alwar.*': "Alwar",
+    # Bharatpur
+    r'.*bharatpur.*': "Bharatpur"
 }
 
 BROKER_MAP = {
@@ -65,11 +101,11 @@ def normalize_station(station_raw: Any) -> Tuple[Optional[str], Optional[str], b
     raw = clean_str(station_raw)
     if not raw:
         return (None, "Direct / Local", True)
-    key = re.sub(r'[^a-zA-Z]', '', raw.lower())
-    for k, canonical in STATION_MAP.items():
-        if k in raw.lower() or key == re.sub(r'[^a-zA-Z]', '', k):
+    raw_lower = raw.lower().strip()
+    for pattern, canonical in STATION_MAP.items():
+        if re.match(pattern, raw_lower):
             return (raw, canonical, raw != canonical)
-    # Title casing default
+    # Title casing default fallback
     clean = " ".join([w.capitalize() for w in raw.split()])
     return (raw, clean, raw != clean)
 

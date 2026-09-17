@@ -16,6 +16,7 @@ import sqlite3
 import json
 from typing import Optional, Dict, Any
 from database import get_db_connection, init_db, is_postgres
+from validator import normalize_station
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEFAULT_DEBIT_DIR = os.path.join(BASE_DIR, "Debit_Note_Sheet")
@@ -156,7 +157,8 @@ def populate(custom_debit_path: Optional[str] = None, custom_lab_path: Optional[
         date_str = format_date_str(date_raw)
         supplier_code = str(r[5]).strip() if len(r) > 5 and r[5] is not None else ''
         supplier_name = str(r[6]).strip() if len(r) > 6 and r[6] is not None else ''
-        station = str(r[7]).strip() if len(r) > 7 and r[7] is not None else ''
+        raw_station = str(r[7]).strip() if len(r) > 7 and r[7] is not None else ''
+        _, station, _ = normalize_station(raw_station)
         bill_no = str(r[13]).strip() if len(r) > 13 and r[13] is not None else ''
         bill_wt_qtl = safe_float(r[22] if len(r) > 22 else None)
         rec_wt_qtl = safe_float(r[23] if len(r) > 23 else None)
