@@ -12,6 +12,10 @@ from typing import Dict, Any, List, Optional
 import datetime
 from database import get_db_connection, is_postgres
 
+import json
+import urllib.request
+import urllib.error
+
 # SMTP Configuration
 SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")
 SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
@@ -19,6 +23,11 @@ SMTP_USER = os.getenv("SMTP_USER", "itchd.kogm@gmail.com")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "otiuncukbgbskxfk")
 EMAIL_FROM = os.getenv("EMAIL_FROM", "itchd.kogm@gmail.com")
 DEFAULT_TEST_EMAIL = os.getenv("TEST_EMAIL", "khandelia@yopmail.com")
+
+# HTTPS Webhook & API Relays (Bypasses Render Free Tier raw SMTP port 587 block)
+GMAIL_WEBHOOK_URL = os.getenv("GMAIL_WEBHOOK_URL", "")
+RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
+BREVO_API_KEY = os.getenv("BREVO_API_KEY", "")
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "khandelia_costing.db")
 
@@ -306,40 +315,163 @@ def generate_weekly_report_html(data: Dict[str, Any]) -> str:
     """
     return html
 
-def send_weekly_42_costing_email(recipient_email: Optional[str] = None) -> Dict[str, Any]:
-    """Sends the weekly 42% costing HTML email report via Gmail SMTP."""
-    target_email = recipient_email.strip() if recipient_email else DEFAULT_TEST_EMAIL
+def _send_via_google_webhook(target_email: str, subject: str, html_content: str) -> Dict[str, Any]:
+    """Sends email via user's Google Apps Script Web App on HTTPS Port 443 (100% Free, Native Gmail)."""
+    payload = json.dumps({
+        "recipient": target_email,
+        "subject": subject,
+        "html": html_content
+    }).encode("utf-8")
     
+    req = urllib.request.Request(
+        GMAIL_WEBHOOK_URL,
+        data=payload,
+        headers={"Content-Type": "application/json", "User-Agent": "KOGMAnalytics/1.0"}
+    )
+    with urllib.request.urlopen(req, timeout=25) as response:
+        res_data = json.loads(response.read().decode("utf-8"))
+        if not res_data.get("success", True):
+            raise RuntimeError(res_data.get("error", "Google Webhook execution failed"))
+        return {
+            "success": True,
+            "channel": "Google Apps Script Webhook (Port 443)",
+            "message": f"Weekly 42% Costing report successfully sent to {target_email} via Gmail Webhook",
+            "recipient": target_email,
+            "timestamp": datetime.datetime.now().isoformat()
+        }
+
+def _send_via_resend(target_email: str, subject: str, html_content: str) -> Dict[str, Any]:
+    """Sends email via Resend Cloud API on HTTPS Port 443."""
+    from_email = os.getenv("RESEND_FROM", f"KOGM Analytics <onboarding@resend.dev>")
+    payload = json.dumps({
+        "from": from_email,
+        "to": [target_email],
+        "subject": subject,
+        "html": html_content
+    }).encode("utf-8")
+    
+    req = urllib.request.Request(
+        "https://api.resend.com/emails",
+        data=payload,
+        headers={
+            "Authorization": f"Bearer {RESEND_API_KEY}",
+            "Content-Type": "application/json"
+        }
+    )
+    with urllib.request.urlopen(req, timeout=20) as response:
+        return {
+            "success": True,
+            "channel": "Resend API (Port 443)",
+            "message": f"Weekly 42% Costing report successfully sent to {target_email} via Resend",
+            "recipient": target_email,
+            "timestamp": datetime.datetime.now().isoformat()
+        }
+
+def _send_via_brevo(target_email: str, subject: str, html_content: str) -> Dict[str, Any]:
+    """Sends email via Brevo (Sendinblue) Cloud API on HTTPS Port 443."""
+    payload = json.dumps({
+        "sender": {"name": "KOGM Analytics", "email": EMAIL_FROM},
+        "to": [{"email": target_email}],
+        "subject": subject,
+        "htmlContent": html_content
+    }).encode("utf-8")
+    
+    req = urllib.request.Request(
+        "https://api.brevo.com/v3/smtp/email",
+        data=payload,
+        headers={
+            "api-key": BREVO_API_KEY,
+            "Content-Type": "application/json"
+        }
+    )
+    with urllib.request.urlopen(req, timeout=20) as response:
+        return {
+            "success": True,
+            "channel": "Brevo API (Port 443)",
+            "message": f"Weekly 42% Costing report successfully sent to {target_email} via Brevo",
+            "recipient": target_email,
+            "timestamp": datetime.datetime.now().isoformat()
+        }
+
+def _send_via_smtp(target_email: str, subject: str, html_content: str) -> Dict[str, Any]:
+    """Sends email via direct Gmail SMTP (Works on local dev and unblocked cloud instances)."""
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = subject
+    msg["From"] = f"KOGM Analytics <{EMAIL_FROM}>"
+    msg["To"] = target_email
+
+    part = MIMEText(html_content, "html")
+    msg.attach(part)
+
+    server = smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=15)
+    server.starttls()
+    server.login(SMTP_USER, SMTP_PASSWORD)
+    server.sendmail(EMAIL_FROM, [target_email], msg.as_string())
+    server.quit()
+
+    return {
+        "success": True,
+        "channel": "Gmail SMTP (Port 587)",
+        "message": f"Weekly 42% Costing report successfully sent to {target_email} via Gmail SMTP",
+        "recipient": target_email,
+        "timestamp": datetime.datetime.now().isoformat()
+    }
+
+def send_weekly_42_costing_email(recipient_email: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Sends the weekly 42% costing HTML email report.
+    Automatically routes through HTTPS Webhook / Cloud API on Render Free Tier
+    where outbound SMTP port 587 is blocked.
+    """
+    target_email = recipient_email.strip() if recipient_email else DEFAULT_TEST_EMAIL
+    subject = f"📊 Weekly 42% Costing & Quality Analytics Report — KOGM Mashal ({datetime.date.today().strftime('%d %b %Y')})"
+
     try:
         data = get_weekly_report_data()
         html_content = generate_weekly_report_html(data)
         
-        msg = MIMEMultipart("alternative")
-        msg["Subject"] = f"📊 Weekly 42% Costing & Quality Analytics Report — KOGM Mashal ({datetime.date.today().strftime('%d %b %Y')})"
-        msg["From"] = f"KOGM Analytics <{EMAIL_FROM}>"
-        msg["To"] = target_email
+        # 1. Prefer Google Apps Script Webhook on HTTPS Port 443 if configured
+        if GMAIL_WEBHOOK_URL and GMAIL_WEBHOOK_URL.startswith("http"):
+            try:
+                return _send_via_google_webhook(target_email, subject, html_content)
+            except Exception as w_err:
+                print(f"Google Webhook failed: {w_err}. Falling back...")
 
-        # Attach HTML body
-        part = MIMEText(html_content, "html")
-        msg.attach(part)
+        # 2. Try Resend Cloud API on HTTPS Port 443 if configured
+        if RESEND_API_KEY:
+            try:
+                return _send_via_resend(target_email, subject, html_content)
+            except Exception as r_err:
+                print(f"Resend API failed: {r_err}. Falling back...")
 
-        # Connect to Gmail SMTP
-        server = smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=15)
-        server.starttls()
-        server.login(SMTP_USER, SMTP_PASSWORD)
-        server.sendmail(EMAIL_FROM, [target_email], msg.as_string())
-        server.quit()
+        # 3. Try Brevo Cloud API on HTTPS Port 443 if configured
+        if BREVO_API_KEY:
+            try:
+                return _send_via_brevo(target_email, subject, html_content)
+            except Exception as b_err:
+                print(f"Brevo API failed: {b_err}. Falling back...")
 
-        return {
-            "success": True,
-            "message": f"Weekly 42% Costing report successfully sent to {target_email}",
-            "recipient": target_email,
-            "timestamp": datetime.datetime.now().isoformat()
-        }
+        # 4. Standard SMTP attempt (Local dev or open cloud hosts)
+        return _send_via_smtp(target_email, subject, html_content)
+
     except Exception as e:
+        err_msg = str(e)
+        if "101" in err_msg or "Network is unreachable" in err_msg or "timed out" in err_msg.lower():
+            hint = (
+                "Render Free Tier blocks raw SMTP port 587. "
+                "To send emails from Render, please add GMAIL_WEBHOOK_URL (Google Apps Script Web App) "
+                "or RESEND_API_KEY/BREVO_API_KEY to Render Environment Variables."
+            )
+            return {
+                "success": False,
+                "error": err_msg,
+                "message": f"Render SMTP Block: {hint}",
+                "recipient": target_email
+            }
+        
         return {
             "success": False,
-            "error": str(e),
-            "message": f"Failed to send email to {target_email}: {str(e)}",
+            "error": err_msg,
+            "message": f"Failed to send email to {target_email}: {err_msg}",
             "recipient": target_email
         }
