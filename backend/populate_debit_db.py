@@ -176,13 +176,14 @@ def populate(custom_debit_path: Optional[str] = None, custom_lab_path: Optional[
             if implied_rate < 1500 and (bill_amt_y / (bill_wt_qtl / 10.0)) > 6000:
                 bill_wt_qtl = round(bill_wt_qtl / 10.0, 2)
 
-        # Track total bill weight per GIN
+        # Track total bill weight and received weights per GIN
         if gin not in gin_totals:
-            gin_totals[gin] = {'total_bill_wt': 0.0, 'truck_rec_wt': rec_wt_qtl, 'count': 0}
+            gin_totals[gin] = {'total_bill_wt': 0.0, 'total_rec_wt': 0.0, 'max_rec_wt': rec_wt_qtl, 'count': 0}
         gin_totals[gin]['total_bill_wt'] += bill_wt_qtl
+        gin_totals[gin]['total_rec_wt'] += rec_wt_qtl
         gin_totals[gin]['count'] += 1
-        if rec_wt_qtl > gin_totals[gin]['truck_rec_wt']:
-            gin_totals[gin]['truck_rec_wt'] = rec_wt_qtl
+        if rec_wt_qtl > gin_totals[gin]['max_rec_wt']:
+            gin_totals[gin]['max_rec_wt'] = rec_wt_qtl
 
         raw_parsed_rows.append({
             'po_no': po_no,
@@ -260,13 +261,16 @@ def populate(custom_debit_path: Optional[str] = None, custom_lab_path: Optional[
             if oil_mismatch:
                 oil_variance_count += 1
 
-        # Pro-Rata Multi-PO Weight Allocation
-        gin_meta = gin_totals.get(gin, {'total_bill_wt': bill_wt_qtl, 'truck_rec_wt': row_dict['rec_wt_qtl'], 'count': 1})
+        # Smart Pro-Rata Multi-PO Weight Allocation
+        gin_meta = gin_totals.get(gin, {'total_bill_wt': bill_wt_qtl, 'total_rec_wt': row_dict['rec_wt_qtl'], 'max_rec_wt': row_dict['rec_wt_qtl'], 'count': 1})
         is_multi_po = gin_meta['count'] > 1 and gin_meta['total_bill_wt'] > 0
-        truck_rec_wt = gin_meta['truck_rec_wt']
 
         if is_multi_po:
-            pro_rata_ratio = bill_wt_qtl / gin_meta['total_bill_wt']
+            tot_b = gin_meta['total_bill_wt']
+            tot_r = gin_meta['total_rec_wt']
+            max_r = gin_meta['max_rec_wt']
+            truck_rec_wt = tot_r if abs(tot_r - tot_b) < abs(max_r - tot_b) else max_r
+            pro_rata_ratio = bill_wt_qtl / tot_b
             alloc_rec_wt_qtl = round(pro_rata_ratio * truck_rec_wt, 2)
             alloc_rec_wt_mt = round(alloc_rec_wt_qtl / 10.0, 4)
         else:

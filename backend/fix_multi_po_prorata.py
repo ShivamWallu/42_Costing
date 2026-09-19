@@ -52,8 +52,11 @@ def run_multi_po_reconciliation():
                     b_wt = round(b_wt / 10.0, 2)
             cleaned_rows.append((r, b_wt))
 
-        truck_rec_wt = max(r['rec_wt_qtl'] for r, _ in cleaned_rows)
+        # Check if raw rec_wt was already split per row or repeated
+        sum_rec_wt = sum(r['rec_wt_qtl'] for r, _ in cleaned_rows)
+        max_rec_wt = max(r['rec_wt_qtl'] for r, _ in cleaned_rows)
         sum_bill_wt = sum(b_wt for _, b_wt in cleaned_rows)
+        truck_rec_wt = sum_rec_wt if abs(sum_rec_wt - sum_bill_wt) < abs(max_rec_wt - sum_bill_wt) else max_rec_wt
 
         for r, b_wt in cleaned_rows:
             ratio = b_wt / sum_bill_wt if sum_bill_wt > 0 else (1.0 / len(rows))
