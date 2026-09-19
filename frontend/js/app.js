@@ -5598,18 +5598,19 @@ function renderAuditDrilldownContent(data) {
 
   // 3. Lab Results Pending Notice Banner (if lab_pending)
   if (audit_type === 'lab_pending') {
+    const lotCountText = `${total.toLocaleString()} Inward Lot${total === 1 ? '' : 's'}`;
     summaryBannerHtml = `
       <div style="background: rgba(249, 115, 22, 0.1); border: 1px solid rgba(249, 115, 22, 0.3); border-radius: 10px; padding: 0.85rem 1.15rem; margin-bottom: 1.25rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
         <div style="display: flex; align-items: center; gap: 10px;">
           <i class="fa-solid fa-triangle-exclamation" style="color: var(--warning-orange); font-size: 1.3rem;"></i>
           <div>
-            <div style="font-weight: 700; color: var(--text-primary); font-size: 0.9rem;">14 Inward Lots Pending NIR Laboratory Oil Tests</div>
+            <div style="font-weight: 700; color: var(--text-primary); font-size: 0.9rem;">${lotCountText} Pending NIR Laboratory Oil Tests</div>
             <div style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 2px;">
               Costing status is kept in <strong>HOLD</strong> state so that incomplete lab tests do not cause artificial yield variance in 42 costing.
             </div>
           </div>
         </div>
-        <span class="badge" style="background: var(--warning-orange); color: #fff; font-weight: 700; padding: 4px 10px;">14 Pending Lots</span>
+        <span class="badge" style="background: var(--warning-orange); color: #fff; font-weight: 700; padding: 4px 10px;">${total.toLocaleString()} Pending Lot${total === 1 ? '' : 's'}</span>
       </div>
     `;
   }
