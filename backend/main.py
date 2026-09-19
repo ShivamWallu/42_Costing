@@ -141,7 +141,7 @@ def get_kpis(
     if anomaly_only:
         where_parts.append("(oil_analyzer_by < 39.0 OR (cost_42_qtl - billed_rate_qtl) >= 200.0 OR net_ded > 75000.0 OR status != 'Matched')")
     if lab_pending_only:
-        where_parts.append("(cost_42_qtl IS NULL OR oil_nir IS NULL OR oil_analyzer_by IS NULL OR oil_analyzer_by <= 0 OR status = 'Lab Data Not Available' OR status LIKE '%Pending%')")
+        where_parts.append("(oil_nir IS NULL OR oil_nir <= 0 OR status = 'Lab Data Not Available' OR status LIKE '%Pending%')")
     if search and search.strip():
         s_clean = search.strip()
         if s_clean.lower() in ["direct", "direct purchase", "direct purchases", "no broker"]:
@@ -1068,7 +1068,7 @@ def get_debit_note_records(
         
     if status:
         if status in ["lab_pending", "pending", "Lab Pending"]:
-            where_clauses.append("(cost_42_qtl IS NULL OR oil_nir IS NULL OR oil_analyzer_by IS NULL OR oil_analyzer_by <= 0 OR status = 'Lab Data Not Available' OR status LIKE '%Pending%')")
+            where_clauses.append("(oil_nir IS NULL OR oil_nir <= 0 OR status = 'Lab Data Not Available' OR status LIKE '%Pending%')")
         else:
             where_clauses.append("status = ?")
             params.append(status)

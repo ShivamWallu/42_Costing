@@ -3056,31 +3056,7 @@ function setupDebitNoteEventListeners() {
 
 // Global helper to filter Debit Note table by clicking header pills
 function filterDebitNoteFromPill(filterType) {
-  // 1. Switch to Debit Note & Costing tab
-  switchTab('debit-note-analysis');
-
-  // 2. Activate 'lots' subtab
-  const btnLots = document.getElementById('btnSubtabLots');
-  if (btnLots) {
-    document.querySelectorAll('.dn-subtab').forEach(b => {
-      b.classList.remove('btn-primary', 'active');
-      b.classList.add('btn-secondary');
-    });
-    btnLots.classList.remove('btn-secondary');
-    btnLots.classList.add('btn-primary', 'active');
-
-    document.querySelectorAll('.dn-content-section').forEach(sec => {
-      sec.style.display = 'none';
-      sec.classList.remove('active');
-    });
-    const elSection = document.getElementById('dnSectionLots');
-    if (elSection) {
-      elSection.style.display = 'block';
-      elSection.classList.add('active');
-    }
-  }
-
-  // 3. Clear any previous conflicting form inputs
+  // 1. Clear any previous conflicting form inputs
   const elSearch = document.getElementById('dnLotSearch');
   const elStatus = document.getElementById('dnLotStatusFilter');
   const elOutcome = document.getElementById('dnLotOutcomeFilter');
@@ -3095,7 +3071,7 @@ function filterDebitNoteFromPill(filterType) {
   if (elStation) elStation.value = '';
   if (elSort) elSort.value = 's_no_asc';
 
-  // 4. Set specific filter values based on clicked pill
+  // 2. Set specific filter values based on clicked pill
   let targetStatus = '';
   let targetOutcome = '';
   let targetSortBy = 's_no';
@@ -3128,7 +3104,7 @@ function filterDebitNoteFromPill(filterType) {
     targetSortOrder = 'asc';
   }
 
-  // 5. Update state & fetch records immediately
+  // 3. Update state FIRST before any network calls
   state.dnPagination.page = 1;
   state.dnPagination.search = '';
   state.dnPagination.status = targetStatus;
@@ -3138,16 +3114,52 @@ function filterDebitNoteFromPill(filterType) {
   state.dnPagination.sortBy = targetSortBy;
   state.dnPagination.sortOrder = targetSortOrder;
 
-  renderDnActiveFiltersBar();
-  loadDebitNoteRecords();
+  // 4. Switch to Debit Note & Costing tab (Direct UI activation for instant responsiveness)
+  state.currentTab = 'debit-note-analysis';
+  document.querySelectorAll('.nav-tab').forEach(tab => {
+    tab.classList.toggle('active', tab.getAttribute('data-tab') === 'debit-note-analysis');
+  });
+  document.querySelectorAll('.tab-content').forEach(c => {
+    c.classList.toggle('active', c.id === 'tab-debit-note-analysis');
+  });
 
-  // 6. Smooth scroll to the Debit Note table
-  setTimeout(() => {
-    const tableEl = document.getElementById('dnSectionLots') || document.getElementById('tableDebitNoteLots');
-    if (tableEl) {
-      tableEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  // 5. Activate 'lots' subtab
+  const btnLots = document.getElementById('btnSubtabLots');
+  if (btnLots) {
+    document.querySelectorAll('.dn-subtab').forEach(b => {
+      b.classList.remove('btn-primary', 'active');
+      b.classList.add('btn-secondary');
+    });
+    btnLots.classList.remove('btn-secondary');
+    btnLots.classList.add('btn-primary', 'active');
+
+    document.querySelectorAll('.dn-content-section').forEach(sec => {
+      sec.style.display = 'none';
+      sec.classList.remove('active');
+    });
+    const elSection = document.getElementById('dnSectionLots');
+    if (elSection) {
+      elSection.style.display = 'block';
+      elSection.classList.add('active');
     }
-  }, 120);
+  }
+
+  // 6. Show active filter chips & immediate loading spinner
+  renderDnActiveFiltersBar();
+  const tbody = document.querySelector('#tableDnLots tbody');
+  if (tbody) {
+    tbody.innerHTML = `<tr><td colspan="16" style="text-align:center; padding: 2.5rem; color: var(--text-muted);"><i class="fa-solid fa-spinner fa-spin" style="font-size:1.6rem; color:var(--mustard-gold); margin-bottom:0.5rem; display:block;"></i><span style="font-size:0.88rem; font-weight:600;">Applying filter & loading lots...</span></td></tr>`;
+  }
+
+  // 7. Fetch records and KPIs in background
+  loadDebitNoteRecords();
+  loadDebitNoteKpis();
+
+  // 8. Instant smooth scroll to the Debit Note table
+  const tableEl = document.getElementById('dnActiveFiltersBar') || document.getElementById('dnSectionLots') || document.getElementById('tableDebitNoteLots');
+  if (tableEl) {
+    tableEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 }
 
 window.filterDebitNoteFromPill = filterDebitNoteFromPill;
@@ -3571,7 +3583,7 @@ async function loadDebitNoteRecords() {
         : (r.cost_42_qtl && billedRateQtl ? (r.cost_42_qtl - billedRateQtl) : null);
       const rateDiffMt = rateDiffQtl !== null ? rateDiffQtl * 10.0 : null;
 
-      const isLabPending = !r.cost_42_qtl || !r.oil_nir || r.oil_analyzer_by <= 0 || r.status === 'Lab Data Not Available';
+      const isLabPending = (r.oil_nir === null || r.oil_nir === undefined || r.oil_nir <= 0 || r.status === 'Lab Data Not Available');
 
       let diffBadge = '—';
       if (isLabPending) {
