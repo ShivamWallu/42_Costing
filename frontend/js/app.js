@@ -5449,9 +5449,34 @@ function closeAuditDrilldownModal() {
 
 function navigateToTransactionsFromAudit(type) {
   closeAuditDrilldownModal();
+
+  if (type === 'direct_purchases') {
+    state.dnPagination.search = 'Direct';
+    state.dnPagination.status = '';
+    state.dnPagination.outcome = '';
+    state.dnPagination.oilRange = '';
+    state.dnPagination.station = '';
+    state.dnPagination.page = 1;
+  } else if (type === 'lab_pending') {
+    state.dnPagination.search = '';
+    state.dnPagination.status = 'lab_pending';
+    state.dnPagination.outcome = '';
+    state.dnPagination.oilRange = '';
+    state.dnPagination.station = '';
+    state.dnPagination.page = 1;
+  } else {
+    state.dnPagination.search = '';
+    state.dnPagination.status = '';
+    state.dnPagination.outcome = '';
+    state.dnPagination.oilRange = '';
+    state.dnPagination.station = '';
+    state.dnPagination.page = 1;
+  }
+
+  // 1. Switch to Debit Note & 42% Costing tab
   switchTab('debit-note-analysis');
 
-  // Activate the "Lots" subtab
+  // 2. Activate the "Lots" subtab
   const btnLots = document.getElementById('btnSubtabLots');
   if (btnLots) {
     document.querySelectorAll('.dn-subtab').forEach(b => {
@@ -5466,42 +5491,38 @@ function navigateToTransactionsFromAudit(type) {
     if (secLots) secLots.classList.add('active');
   }
 
-  // Reset dropdown filters
-  if (document.getElementById('dnLotStatusFilter')) document.getElementById('dnLotStatusFilter').value = '';
+  // 3. Populate Search / Filter UI Elements
+  const searchInp = document.getElementById('dnLotSearch');
+  if (searchInp) {
+    searchInp.value = state.dnPagination.search;
+    if (type === 'direct_purchases') {
+      searchInp.style.boxShadow = '0 0 0 3px rgba(16, 185, 129, 0.5)';
+      searchInp.style.borderColor = 'var(--success-green)';
+      setTimeout(() => {
+        searchInp.style.boxShadow = '';
+        searchInp.style.borderColor = '';
+      }, 3000);
+    }
+  }
+
+  const statusSel = document.getElementById('dnLotStatusFilter');
+  if (statusSel) statusSel.value = state.dnPagination.status;
+
   if (document.getElementById('dnLotOutcomeFilter')) document.getElementById('dnLotOutcomeFilter').value = '';
   if (document.getElementById('dnLotOilFilter')) document.getElementById('dnLotOilFilter').value = '';
   if (document.getElementById('dnLotStationFilter')) document.getElementById('dnLotStationFilter').value = '';
   if (document.getElementById('dnLotSortBy')) document.getElementById('dnLotSortBy').value = 's_no_asc';
 
-  state.dnPagination.search = '';
-  state.dnPagination.status = '';
-  state.dnPagination.outcome = '';
-  state.dnPagination.oilRange = '';
-  state.dnPagination.station = '';
-  state.dnPagination.sortBy = 's_no';
-  state.dnPagination.sortOrder = 'asc';
-  state.dnPagination.page = 1;
-
-  if (type === 'direct_purchases') {
-    const searchInp = document.getElementById('dnLotSearch');
-    if (searchInp) searchInp.value = 'Direct';
-    state.dnPagination.search = 'Direct';
-  } else if (type === 'lab_pending') {
-    const statusSel = document.getElementById('dnLotStatusFilter');
-    if (statusSel) statusSel.value = 'lab_pending';
-    state.dnPagination.status = 'lab_pending';
-  } else if (type === 'stations_normalized') {
-    const searchInp = document.getElementById('dnLotSearch');
-    if (searchInp) searchInp.value = '';
-  }
-
+  // 4. Fetch and render filtered records
   loadDebitNoteRecords();
 
-  // Smooth scroll to the table
+  // 5. Smooth scroll directly to the table
   setTimeout(() => {
-    const tableEl = document.getElementById('tableDnLots') || document.getElementById('dnSectionLots');
-    if (tableEl) tableEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, 150);
+    const tableEl = document.getElementById('dnLotSearch') || document.getElementById('dnSectionLots') || document.getElementById('tableDnLots');
+    if (tableEl) {
+      tableEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, 120);
 }
 
 // ==============================================================================
