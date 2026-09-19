@@ -192,10 +192,10 @@ def get_kpis(
     # Loss vs Profit vs Neutral vs Pending Counts (Apple-to-Apple: 42 Costing vs Billed Purchase Rate)
     cursor.execute(f"""
         SELECT 
-            COALESCE(SUM(CASE WHEN (cost_42_qtl - billed_rate_qtl) > 0.01 THEN 1 ELSE 0 END), 0) as loss_count,
-            COALESCE(SUM(CASE WHEN (cost_42_qtl - billed_rate_qtl) < -0.01 THEN 1 ELSE 0 END), 0) as profit_count,
-            COALESCE(SUM(CASE WHEN ABS(cost_42_qtl - billed_rate_qtl) <= 0.01 AND cost_42_qtl IS NOT NULL AND billed_rate_qtl > 0 THEN 1 ELSE 0 END), 0) as neutral_count,
-            COALESCE(SUM(CASE WHEN cost_42_qtl IS NULL OR billed_rate_qtl IS NULL OR billed_rate_qtl <= 0 THEN 1 ELSE 0 END), 0) as pending_count
+            COALESCE(SUM(CASE WHEN (cost_42_qtl - billed_rate_qtl) > 0.01 AND oil_nir > 0 AND status != 'Lab Data Not Available' THEN 1 ELSE 0 END), 0) as loss_count,
+            COALESCE(SUM(CASE WHEN (cost_42_qtl - billed_rate_qtl) < -0.01 AND oil_nir > 0 AND status != 'Lab Data Not Available' THEN 1 ELSE 0 END), 0) as profit_count,
+            COALESCE(SUM(CASE WHEN ABS(cost_42_qtl - billed_rate_qtl) <= 0.01 AND oil_nir > 0 AND status != 'Lab Data Not Available' THEN 1 ELSE 0 END), 0) as neutral_count,
+            COALESCE(SUM(CASE WHEN (oil_nir IS NULL OR oil_nir <= 0 OR status = 'Lab Data Not Available') THEN 1 ELSE 0 END), 0) as pending_count
         FROM debit_note_records
         {where_sql}
     """, params)
@@ -214,9 +214,9 @@ def get_kpis(
     cursor.execute(f"""
         SELECT 
             CASE 
+                WHEN (oil_nir IS NULL OR oil_nir <= 0 OR status = 'Lab Data Not Available') THEN 'PENDING'
                 WHEN (cost_42_qtl - billed_rate_qtl) > 0.01 THEN 'LOSS'
                 WHEN (cost_42_qtl - billed_rate_qtl) < -0.01 THEN 'GAIN'
-                WHEN cost_42_qtl IS NULL OR billed_rate_qtl IS NULL OR billed_rate_qtl <= 0 THEN 'PENDING'
                 ELSE 'NEUTRAL'
             END as impact_type,
             COUNT(*) as count

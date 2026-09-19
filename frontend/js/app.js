@@ -3080,7 +3080,7 @@ function filterDebitNoteFromPill(filterType) {
     }
   }
 
-  // 3. Reset form inputs
+  // 3. Clear any previous conflicting form inputs
   const elSearch = document.getElementById('dnLotSearch');
   const elStatus = document.getElementById('dnLotStatusFilter');
   const elOutcome = document.getElementById('dnLotOutcomeFilter');
@@ -3096,40 +3096,49 @@ function filterDebitNoteFromPill(filterType) {
   if (elSort) elSort.value = 's_no_asc';
 
   // 4. Set specific filter values based on clicked pill
+  let targetStatus = '';
+  let targetOutcome = '';
+  let targetSortBy = 's_no';
+  let targetSortOrder = 'asc';
+
   if (filterType === 'loss') {
     if (elOutcome) elOutcome.value = 'loss';
     if (elSort) elSort.value = 'variance_desc';
+    targetOutcome = 'loss';
+    targetSortBy = 'cost_variance';
+    targetSortOrder = 'desc';
   } else if (filterType === 'profit') {
     if (elOutcome) elOutcome.value = 'profit';
     if (elSort) elSort.value = 'variance_asc';
+    targetOutcome = 'profit';
+    targetSortBy = 'cost_variance';
+    targetSortOrder = 'asc';
   } else if (filterType === 'even') {
     if (elOutcome) elOutcome.value = 'even';
+    targetOutcome = 'even';
+    targetSortBy = 's_no';
+    targetSortOrder = 'asc';
   } else if (filterType === 'pending') {
     if (elStatus) elStatus.value = 'lab_pending';
+    targetStatus = 'lab_pending';
+    targetSortBy = 's_no';
+    targetSortOrder = 'asc';
   } else if (filterType === 'total') {
-    // Show all 2,038 records without filter
+    targetSortBy = 's_no';
+    targetSortOrder = 'asc';
   }
 
   // 5. Update state & fetch records immediately
   state.dnPagination.page = 1;
   state.dnPagination.search = '';
-  state.dnPagination.status = elStatus?.value || '';
-  state.dnPagination.outcome = elOutcome?.value || '';
+  state.dnPagination.status = targetStatus;
+  state.dnPagination.outcome = targetOutcome;
   state.dnPagination.oilRange = '';
   state.dnPagination.station = '';
+  state.dnPagination.sortBy = targetSortBy;
+  state.dnPagination.sortOrder = targetSortOrder;
 
-  const sortVal = elSort?.value || 's_no_asc';
-  if (sortVal === 'variance_desc') {
-    state.dnPagination.sortBy = 'cost_variance';
-    state.dnPagination.sortOrder = 'desc';
-  } else if (sortVal === 'variance_asc') {
-    state.dnPagination.sortBy = 'cost_variance';
-    state.dnPagination.sortOrder = 'asc';
-  } else {
-    state.dnPagination.sortBy = 's_no';
-    state.dnPagination.sortOrder = 'asc';
-  }
-
+  renderDnActiveFiltersBar();
   loadDebitNoteRecords();
 
   // 6. Smooth scroll to the Debit Note table
@@ -3138,7 +3147,7 @@ function filterDebitNoteFromPill(filterType) {
     if (tableEl) {
       tableEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-  }, 100);
+  }, 120);
 }
 
 window.filterDebitNoteFromPill = filterDebitNoteFromPill;
@@ -5839,7 +5848,8 @@ function navigateToTransactionsFromAudit(type) {
   if (document.getElementById('dnLotStationFilter')) document.getElementById('dnLotStationFilter').value = '';
   if (document.getElementById('dnLotSortBy')) document.getElementById('dnLotSortBy').value = 's_no_asc';
 
-  // 4. Fetch and render filtered records
+  // 4. Update active filter chips and fetch records
+  renderDnActiveFiltersBar();
   loadDebitNoteRecords();
 
   // 5. Smooth scroll directly to the table
