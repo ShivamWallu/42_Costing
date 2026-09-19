@@ -5280,8 +5280,6 @@ function renderAuditDrilldownContent(data) {
   }
 
   // 4. Action Button for Transactions Tab
-  let hubButtonText = 'Open in Full Transactions Hub';
-  // 4. Action Button for Transactions Tab
   let hubButtonText = 'View in 42% Costing Table';
   let hubIcon = 'fa-solid fa-table-list';
   let hubBtnClass = 'btn-primary';
