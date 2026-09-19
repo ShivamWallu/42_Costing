@@ -3670,11 +3670,17 @@ async function loadDebitNoteRecords() {
         `;
       }
 
+      const isMultiPo = r.remarks && r.remarks.includes('Multi-PO');
+      const multiPoBadge = isMultiPo
+        ? `<span class="badge" style="background: rgba(14, 165, 233, 0.14); color: #38bdf8; border: 1px solid rgba(14, 165, 233, 0.4); font-size: 0.68rem; font-weight: 700; padding: 1px 6px; border-radius: 4px; display: inline-flex; align-items: center; gap: 3px;" title="${r.remarks}"><i class="fa-solid fa-truck-ramp-box"></i> Multi-PO Split</span>`
+        : '';
+
       tr.innerHTML = `
         <td>
-          <div style="display: flex; align-items: baseline; gap: 0.45rem;">
+          <div style="display: flex; align-items: baseline; gap: 0.45rem; flex-wrap: wrap;">
             <span style="font-size:0.82rem; color:var(--text-muted); font-weight:700;">#${r.s_no}</span>
             <strong style="color:var(--text-primary); font-size:0.98rem;">${r.supplier_name}</strong>
+            ${multiPoBadge}
           </div>
           <div style="font-size:0.8rem; color:var(--text-muted); margin-top:3px;">
             <span style="color:var(--mustard-gold); font-weight:700;">${r.gin}</span>

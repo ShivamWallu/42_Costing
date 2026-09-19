@@ -150,6 +150,9 @@ def populate(custom_debit_path: Optional[str] = None, custom_lab_path: Optional[
     oil_comparison_count = 0
     oil_variance_count = 0
 
+    raw_parsed_rows = []
+    gin_totals = {}
+
     for r in rows_iter:
         po_no = str(r[0]).strip() if len(r) > 0 and r[0] is not None else ''
         gin = str(r[3]).strip() if len(r) > 3 and r[3] is not None else ''
@@ -162,11 +165,50 @@ def populate(custom_debit_path: Optional[str] = None, custom_lab_path: Optional[
         bill_no = str(r[13]).strip() if len(r) > 13 and r[13] is not None else ''
         bill_wt_qtl = safe_float(r[22] if len(r) > 22 else None)
         rec_wt_qtl = safe_float(r[23] if len(r) > 23 else None)
-        rec_wt_mt = round(rec_wt_qtl / 10.0, 4) if rec_wt_qtl > 0 else 0.0
         bill_amt_y = safe_float(r[24] if len(r) > 24 else None)
 
         if not gin and not supplier_name and bill_amt_y == 0:
             continue
+
+        # Handle decimal typo in raw sheet if bill_wt was typed with extra digit
+        if bill_wt_qtl > 0 and bill_amt_y > 0:
+            implied_rate = bill_amt_y / bill_wt_qtl
+            if implied_rate < 1500 and (bill_amt_y / (bill_wt_qtl / 10.0)) > 6000:
+                bill_wt_qtl = round(bill_wt_qtl / 10.0, 2)
+
+        # Track total bill weight per GIN
+        if gin not in gin_totals:
+            gin_totals[gin] = {'total_bill_wt': 0.0, 'truck_rec_wt': rec_wt_qtl, 'count': 0}
+        gin_totals[gin]['total_bill_wt'] += bill_wt_qtl
+        gin_totals[gin]['count'] += 1
+        if rec_wt_qtl > gin_totals[gin]['truck_rec_wt']:
+            gin_totals[gin]['truck_rec_wt'] = rec_wt_qtl
+
+        raw_parsed_rows.append({
+            'po_no': po_no,
+            'gin': gin,
+            'date_str': date_str,
+            'supplier_code': supplier_code,
+            'supplier_name': supplier_name,
+            'station': station,
+            'bill_no': bill_no,
+            'bill_wt_qtl': bill_wt_qtl,
+            'rec_wt_qtl': rec_wt_qtl,
+            'bill_amt_y': bill_amt_y,
+            'raw_row': r
+        })
+
+    for row_dict in raw_parsed_rows:
+        r = row_dict['raw_row']
+        po_no = row_dict['po_no']
+        gin = row_dict['gin']
+        date_str = row_dict['date_str']
+        supplier_code = row_dict['supplier_code']
+        supplier_name = row_dict['supplier_name']
+        station = row_dict['station']
+        bill_no = row_dict['bill_no']
+        bill_wt_qtl = row_dict['bill_wt_qtl']
+        bill_amt_y = row_dict['bill_amt_y']
 
         row_count += 1
         s_no = row_count
@@ -218,17 +260,30 @@ def populate(custom_debit_path: Optional[str] = None, custom_lab_path: Optional[
             if oil_mismatch:
                 oil_variance_count += 1
 
+        # Pro-Rata Multi-PO Weight Allocation
+        gin_meta = gin_totals.get(gin, {'total_bill_wt': bill_wt_qtl, 'truck_rec_wt': row_dict['rec_wt_qtl'], 'count': 1})
+        is_multi_po = gin_meta['count'] > 1 and gin_meta['total_bill_wt'] > 0
+        truck_rec_wt = gin_meta['truck_rec_wt']
+
+        if is_multi_po:
+            pro_rata_ratio = bill_wt_qtl / gin_meta['total_bill_wt']
+            alloc_rec_wt_qtl = round(pro_rata_ratio * truck_rec_wt, 2)
+            alloc_rec_wt_mt = round(alloc_rec_wt_qtl / 10.0, 4)
+        else:
+            alloc_rec_wt_qtl = row_dict['rec_wt_qtl']
+            alloc_rec_wt_mt = round(alloc_rec_wt_qtl / 10.0, 4) if alloc_rec_wt_qtl > 0 else 0.0
+
         # Rate calculations
         if bill_wt_qtl > 0:
             billed_rate_qtl = round(bill_amt_y / bill_wt_qtl, 2)
-        elif rec_wt_qtl > 0:
-            billed_rate_qtl = round(bill_amt_y / rec_wt_qtl, 2)
+        elif alloc_rec_wt_qtl > 0:
+            billed_rate_qtl = round(bill_amt_y / alloc_rec_wt_qtl, 2)
         else:
             billed_rate_qtl = 0.0
         billed_rate_mt = round(billed_rate_qtl * 10.0, 2)
 
-        if rec_wt_mt > 0:
-            landing_cost_mt = round((bill_amt_y - net_ded) / rec_wt_mt, 2)
+        if alloc_rec_wt_mt > 0:
+            landing_cost_mt = round((bill_amt_y - net_ded) / alloc_rec_wt_mt, 2)
             landing_cost_qtl = round(landing_cost_mt / 10.0, 2)
         else:
             landing_cost_mt = None
@@ -257,6 +312,9 @@ def populate(custom_debit_path: Optional[str] = None, custom_lab_path: Optional[
         # Status & Audit Remarks
         status = "Matched"
         remarks_list = []
+        if is_multi_po:
+            remarks_list.append(f"Multi-PO Truck Split (Truck Rec: {truck_rec_wt:.1f} Qtl, Alloc: {alloc_rec_wt_qtl:.1f} Qtl)")
+
         if not lab_info:
             status = "Lab Report Not Matched"
             remarks_list.append("Lot pending in Lab Report Unit-1")
@@ -283,7 +341,7 @@ def populate(custom_debit_path: Optional[str] = None, custom_lab_path: Optional[
         debit_insert_rows.append((
             s_no, gin, po_no, supplier_code, supplier_name, station, supervisor,
             broker_name, brokerage_rate, date_str, bill_no,
-            bill_wt_qtl, rec_wt_mt, rec_wt_qtl, bill_amt_y, bill_amt_y,
+            bill_wt_qtl, alloc_rec_wt_mt, alloc_rec_wt_qtl, bill_amt_y, bill_amt_y,
             billed_rate_qtl, billed_rate_mt, rate_diff_qtl, rate_diff_mt,
             net_ded, landing_cost_mt, landing_cost_qtl, primary_oil,
             oil_by, oil_ax, oil_diff, oil_mismatch,
