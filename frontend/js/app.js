@@ -5333,25 +5333,25 @@ function renderAuditDrilldownContent(data) {
 
       return `
         <tr>
-          <td style="font-size: 0.8rem; white-space: nowrap; color: var(--text-secondary);">${r.gin_date || '—'}</td>
-          <td style="font-size: 0.8rem; font-weight: 600; font-family: monospace; color: var(--accent-blue);">${r.grn_no || r.gin || '—'}</td>
-          <td style="font-size: 0.82rem; font-weight: 600; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${r.supplier_name}">${r.supplier_name || '—'}</td>
-          <td style="font-size: 0.82rem;">${mandiDisplay}</td>
-          <td style="font-size: 0.82rem;">${brokerDisplay}</td>
-          <td style="font-size: 0.82rem; text-align: right; font-variant-numeric: tabular-nums;">${r.bill_wt ? r.bill_wt.toFixed(2) : '—'}</td>
-          <td style="font-size: 0.82rem; text-align: right;" class="td-col-rate"><span class="badge-rate" style="font-size:0.78rem; padding:2px 6px;"><i class="fa-solid fa-cart-shopping" style="font-size:0.68rem; opacity:0.85;"></i> ₹${r.actual_rate ? r.actual_rate.toFixed(2) : '—'}</span></td>
-          <td style="font-size: 0.82rem; text-align: center;">${nirDisplay}</td>
-          <td style="font-size: 0.82rem; text-align: center;">${axDisplay}</td>
-          <td style="font-size: 0.82rem; text-align: right;" class="td-col-cost42"><span class="badge-cost42" style="font-size:0.80rem; padding:2px 7px;"><i class="fa-solid fa-star" style="font-size:0.68rem; color:#f59e0b;"></i> ${cost42Display}</span></td>
+          <td style="font-size: 0.82rem; white-space: nowrap; color: var(--text-secondary); padding: 10px 12px;">${r.gin_date || '—'}</td>
+          <td style="font-size: 0.82rem; font-weight: 600; font-family: monospace; color: var(--accent-blue); white-space: nowrap; padding: 10px 12px;">${r.grn_no || r.gin || '—'}</td>
+          <td style="font-size: 0.84rem; font-weight: 600; min-width: 200px; max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 10px 12px;" title="${r.supplier_name}">${r.supplier_name || '—'}</td>
+          <td style="font-size: 0.82rem; white-space: nowrap; padding: 10px 12px;">${mandiDisplay}</td>
+          <td style="font-size: 0.82rem; white-space: nowrap; padding: 10px 12px;">${brokerDisplay}</td>
+          <td style="font-size: 0.84rem; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; padding: 10px 12px; font-weight: 500;">${r.bill_wt ? r.bill_wt.toFixed(2) : '—'}</td>
+          <td style="font-size: 0.84rem; text-align: right; white-space: nowrap; padding: 10px 12px;" class="td-col-rate"><span class="badge-rate" style="font-size:0.80rem; padding:3px 8px; font-weight: 600;"><i class="fa-solid fa-cart-shopping" style="font-size:0.72rem; opacity:0.85;"></i> ₹${r.actual_rate ? r.actual_rate.toFixed(2) : '—'}</span></td>
+          <td style="font-size: 0.82rem; text-align: center; white-space: nowrap; padding: 10px 12px;">${nirDisplay}</td>
+          <td style="font-size: 0.82rem; text-align: center; white-space: nowrap; padding: 10px 12px;">${axDisplay}</td>
+          <td style="font-size: 0.84rem; text-align: right; white-space: nowrap; padding: 10px 12px;" class="td-col-cost42"><span class="badge-cost42" style="font-size:0.82rem; padding:3px 8px; font-weight: 700;"><i class="fa-solid fa-star" style="font-size:0.72rem; color:#f59e0b;"></i> ${cost42Display}</span></td>
         </tr>
       `;
     }).join('');
   } else {
     rowsHtml = `
       <tr>
-        <td colspan="10" style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
-          <i class="fa-solid fa-folder-open" style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.5;"></i>
-          <div>No matching records found for this filter.</div>
+        <td colspan="10" style="text-align: center; padding: 3rem; color: var(--text-muted);">
+          <i class="fa-solid fa-folder-open" style="font-size: 2.2rem; margin-bottom: 0.5rem; opacity: 0.5;"></i>
+          <div style="font-size: 0.95rem; font-weight: 500;">No matching records found for this filter.</div>
         </td>
       </tr>
     `;
@@ -5365,42 +5365,42 @@ function renderAuditDrilldownContent(data) {
 
     <!-- Toolbar: Search + Stats + Hub Button -->
     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1rem;">
-      <div style="display: flex; align-items: center; gap: 0.75rem; flex: 1; min-width: 260px;">
-        <div style="position: relative; flex: 1; max-width: 360px;">
+      <div style="display: flex; align-items: center; gap: 0.75rem; flex: 1; min-width: 280px;">
+        <div style="position: relative; flex: 1; max-width: 400px;">
           <input type="text" id="inputAuditDrilldownSearch" 
                  placeholder="Search supplier, station, GRN, broker..." 
                  value="${auditDrilldownState.search || ''}" 
-                 style="width: 100%; padding: 7px 10px 7px 32px; font-size: 0.82rem; border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--bg-input); color: var(--text-primary);"
+                 style="width: 100%; padding: 8px 12px 8px 34px; font-size: 0.85rem; border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--bg-input); color: var(--text-primary);"
                  oninput="handleAuditDrilldownSearch(this.value)">
-          <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 0.8rem; color: var(--text-muted);"></i>
+          <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 11px; top: 50%; transform: translateY(-50%); font-size: 0.85rem; color: var(--text-muted);"></i>
         </div>
-        <div style="font-size: 0.8rem; color: var(--text-muted); white-space: nowrap;">
-          Found: <strong style="color: var(--text-primary);">${total.toLocaleString()}</strong> records
+        <div style="font-size: 0.85rem; color: var(--text-muted); white-space: nowrap;">
+          Found: <strong style="color: var(--text-primary); font-size: 0.9rem;">${total.toLocaleString()}</strong> records
         </div>
       </div>
 
       <div style="display: flex; align-items: center; gap: 0.5rem;">
-        <button class="${hubBtnClass}" onclick="navigateToTransactionsFromAudit('${audit_type}')" style="padding: 7px 14px; font-size: 0.82rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; border-radius: 8px; cursor: pointer;">
+        <button class="${hubBtnClass}" onclick="navigateToTransactionsFromAudit('${audit_type}')" style="padding: 8px 16px; font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 7px; border-radius: 8px; cursor: pointer;">
           <i class="${hubIcon}"></i> ${hubButtonText}
         </button>
       </div>
     </div>
 
     <!-- Data Table Container -->
-    <div class="table-responsive" style="max-height: 440px; overflow-y: auto; border: 1px solid var(--border-subtle); border-radius: 8px;">
-      <table class="data-table" style="width: 100%; margin: 0; font-size: 0.82rem;">
+    <div class="table-responsive" style="max-height: 520px; overflow-y: auto; overflow-x: auto; border: 1px solid var(--border-subtle); border-radius: 10px; box-shadow: inset 0 0 4px rgba(0,0,0,0.05);">
+      <table class="data-table" style="width: 100%; min-width: 1150px; margin: 0; font-size: 0.83rem;">
         <thead style="position: sticky; top: 0; z-index: 2; background: var(--bg-card);">
           <tr>
-            <th style="padding: 9px 10px;">Date</th>
-            <th style="padding: 9px 10px;">GRN / GIN</th>
-            <th style="padding: 9px 10px;">Supplier</th>
-            <th style="padding: 9px 10px;">Mandi / Station</th>
-            <th style="padding: 9px 10px;">Broker</th>
-            <th style="padding: 9px 10px; text-align: right;">Net Wt (Qtl)</th>
-            <th class="th-col-rate" style="padding: 9px 10px; text-align: right;"><i class="fa-solid fa-cart-shopping" style="font-size:0.75rem; margin-right:3px;"></i> Purchase Rate (₹)</th>
-            <th class="th-col-oil" style="padding: 9px 10px; text-align: center;">Tested Oil %</th>
-            <th class="th-col-rate" style="padding: 9px 10px; text-align: center;">NIR Oil %</th>
-            <th class="th-col-cost42" style="padding: 9px 10px; text-align: right;"><i class="fa-solid fa-star" style="font-size:0.75rem; margin-right:3px;"></i> 42% Standard Cost (₹)</th>
+            <th style="padding: 10px 12px; white-space: nowrap;">Date</th>
+            <th style="padding: 10px 12px; white-space: nowrap;">GRN / GIN</th>
+            <th style="padding: 10px 12px; white-space: nowrap; min-width: 200px;">Supplier</th>
+            <th style="padding: 10px 12px; white-space: nowrap;">Mandi / Station</th>
+            <th style="padding: 10px 12px; white-space: nowrap;">Broker</th>
+            <th style="padding: 10px 12px; text-align: right; white-space: nowrap;">Net Wt (Qtl)</th>
+            <th class="th-col-rate" style="padding: 10px 12px; text-align: right; white-space: nowrap;"><i class="fa-solid fa-cart-shopping" style="font-size:0.75rem; margin-right:4px;"></i> Purchase Rate (₹)</th>
+            <th class="th-col-oil" style="padding: 10px 12px; text-align: center; white-space: nowrap;">Tested Oil %</th>
+            <th class="th-col-rate" style="padding: 10px 12px; text-align: center; white-space: nowrap;">NIR Oil %</th>
+            <th class="th-col-cost42" style="padding: 10px 12px; text-align: right; white-space: nowrap;"><i class="fa-solid fa-star" style="font-size:0.75rem; margin-right:4px;"></i> 42% Standard Cost (₹)</th>
           </tr>
         </thead>
         <tbody>
