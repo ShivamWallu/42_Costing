@@ -541,6 +541,132 @@ h4,
   border-color: var(--mustard-gold);
 }
 
+/* Active Filter Indicators & Interactive Chips Bar */
+.filter-active-control {
+  border-color: #f59e0b !important;
+  background: rgba(245, 158, 11, 0.12) !important;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.3), 0 2px 8px rgba(245, 158, 11, 0.15) !important;
+  color: #fef08a !important;
+  transition: all 0.2s ease;
+}
+
+.filter-active-control select,
+.filter-active-control input {
+  color: #fef3c7 !important;
+  font-weight: 700 !important;
+}
+
+.filter-active-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #f59e0b;
+  color: #000;
+  font-size: 0.70rem;
+  font-weight: 800;
+  border-radius: 999px;
+  padding: 1px 6px;
+  margin-left: 4px;
+}
+
+.active-filters-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  width: 100%;
+  padding: 0.55rem 0.85rem;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: var(--radius-md);
+  margin-top: 0.65rem;
+  animation: fadeIn 0.25s ease-in-out;
+}
+
+.active-filters-label {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--mustard-gold);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.active-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: var(--text-primary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 3px 8px 3px 10px;
+  border-radius: 999px;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .active-filter-chip {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.5);
+  color: #78350f;
+}
+
+.active-filter-chip strong {
+  color: var(--mustard-gold);
+}
+
+[data-theme="light"] .active-filter-chip strong {
+  color: #b45309;
+}
+
+.active-filter-chip .btn-chip-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--text-secondary);
+  border: none;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  font-size: 0.70rem;
+  cursor: pointer;
+  line-height: 1;
+  transition: all 0.15s ease;
+}
+
+.active-filter-chip .btn-chip-remove:hover {
+  background: var(--danger-red);
+  color: #fff;
+  transform: scale(1.15);
+}
+
+.btn-clear-all-chips {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: 1px dashed rgba(239, 68, 68, 0.5);
+  color: var(--danger-red);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-left: auto;
+}
+
+.btn-clear-all-chips:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: var(--danger-red);
+  color: #ef4444;
+}
+
 .custom-date-field {
   position: relative;
   display: inline-flex;

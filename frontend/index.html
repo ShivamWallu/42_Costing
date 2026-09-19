@@ -223,6 +223,9 @@
         <i class="fa-solid fa-rotate-left"></i> Reset
       </button>
     </div>
+
+    <!-- Dynamic Active Filters Indicator & Chips Bar -->
+    <div id="globalActiveFiltersBar" class="active-filters-bar" style="display: none;"></div>
   </section>
 
   <!-- Application Main Container -->
@@ -2080,6 +2083,9 @@
                 Showing 1 to 25 of 2,038 records
               </div>
             </div>
+
+            <!-- Active Filters Bar for Debit Note Table -->
+            <div id="dnActiveFiltersBar" class="active-filters-bar" style="display: none; margin-top: 0.75rem;"></div>
           </div>
 
           <div class="table-container" style="max-height: 600px;">
@@ -3472,7 +3478,7 @@
   </div>
 
   <!-- Application Logic JS -->
-  <script src="/js/app.js?v=18.0"></script>
+  <script src="/js/app.js?v=19.0"></script>
 </body>
 
 </html>

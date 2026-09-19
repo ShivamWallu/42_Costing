@@ -571,33 +571,205 @@ function updateDateDisplayLabels() {
 }
 
 function readFiltersFromUI() {
-  state.filters.supervisor = document.getElementById('filterSupervisor').value;
-  state.filters.supplier = document.getElementById('filterSupplier').value;
-  state.filters.station = document.getElementById('filterStation').value;
-  state.filters.date_from = document.getElementById('filterDateFrom').value;
-  state.filters.date_to = document.getElementById('filterDateTo').value;
-  state.filters.anomaly_only = document.getElementById('filterAnomalyOnly').checked;
-  state.filters.lab_pending_only = document.getElementById('filterLabPending').checked;
-  state.filters.search = document.getElementById('filterSearch').value.trim();
+  state.filters.supervisor = document.getElementById('filterSupervisor')?.value || '';
+  state.filters.supplier = document.getElementById('filterSupplier')?.value || '';
+  state.filters.station = document.getElementById('filterStation')?.value || '';
+  state.filters.date_from = document.getElementById('filterDateFrom')?.value || '';
+  state.filters.date_to = document.getElementById('filterDateTo')?.value || '';
+  state.filters.anomaly_only = document.getElementById('filterAnomalyOnly')?.checked || false;
+  state.filters.lab_pending_only = document.getElementById('filterLabPending')?.checked || false;
+  state.filters.search = (document.getElementById('filterSearch')?.value || '').trim();
   updateDateDisplayLabels();
+  renderGlobalActiveFiltersBar();
 }
 
 function resetFiltersUI() {
-  document.getElementById('filterSupervisor').value = '';
-  document.getElementById('filterSupplier').value = '';
-  document.getElementById('filterStation').value = '';
+  if (document.getElementById('filterSupervisor')) document.getElementById('filterSupervisor').value = '';
+  if (document.getElementById('filterSupplier')) document.getElementById('filterSupplier').value = '';
+  if (document.getElementById('filterStation')) document.getElementById('filterStation').value = '';
   if (state.filterOptions && state.filterOptions.min_date) {
-    document.getElementById('filterDateFrom').value = state.filterOptions.min_date;
-    document.getElementById('filterDateTo').value = state.filterOptions.max_date;
+    if (document.getElementById('filterDateFrom')) document.getElementById('filterDateFrom').value = state.filterOptions.min_date;
+    if (document.getElementById('filterDateTo')) document.getElementById('filterDateTo').value = state.filterOptions.max_date;
   } else {
-    document.getElementById('filterDateFrom').value = '';
-    document.getElementById('filterDateTo').value = '';
+    if (document.getElementById('filterDateFrom')) document.getElementById('filterDateFrom').value = '';
+    if (document.getElementById('filterDateTo')) document.getElementById('filterDateTo').value = '';
   }
-  document.getElementById('filterAnomalyOnly').checked = false;
-  document.getElementById('filterLabPending').checked = false;
-  document.getElementById('filterSearch').value = '';
+  if (document.getElementById('filterAnomalyOnly')) document.getElementById('filterAnomalyOnly').checked = false;
+  if (document.getElementById('filterLabPending')) document.getElementById('filterLabPending').checked = false;
+  if (document.getElementById('filterSearch')) document.getElementById('filterSearch').value = '';
   readFiltersFromUI();
 }
+
+function renderGlobalActiveFiltersBar() {
+  const bar = document.getElementById('globalActiveFiltersBar');
+  if (!bar) return;
+
+  const chips = [];
+
+  const toggleControlActive = (el, isActive) => {
+    if (!el) return;
+    const itemWrap = el.closest('.filter-item') || el;
+    if (isActive) {
+      itemWrap.classList.add('filter-active-control');
+    } else {
+      itemWrap.classList.remove('filter-active-control');
+    }
+  };
+
+  const supEl = document.getElementById('filterSupervisor');
+  const supActive = !!(state.filters.supervisor);
+  toggleControlActive(supEl, supActive);
+  if (supActive) {
+    chips.push({
+      key: 'supervisor',
+      label: 'Supervisor',
+      value: state.filters.supervisor,
+      icon: 'fa-solid fa-user-tie'
+    });
+  }
+
+  const suppEl = document.getElementById('filterSupplier');
+  const suppActive = !!(state.filters.supplier);
+  toggleControlActive(suppEl, suppActive);
+  if (suppActive) {
+    chips.push({
+      key: 'supplier',
+      label: 'Supplier',
+      value: state.filters.supplier,
+      icon: 'fa-solid fa-building'
+    });
+  }
+
+  const statEl = document.getElementById('filterStation');
+  const statActive = !!(state.filters.station);
+  toggleControlActive(statEl, statActive);
+  if (statActive) {
+    chips.push({
+      key: 'station',
+      label: 'Station',
+      value: state.filters.station,
+      icon: 'fa-solid fa-location-dot'
+    });
+  }
+
+  const searchEl = document.getElementById('filterSearch');
+  const searchActive = !!(state.filters.search && state.filters.search.trim());
+  toggleControlActive(searchEl, searchActive);
+  if (searchActive) {
+    chips.push({
+      key: 'search',
+      label: 'Search',
+      value: `"${state.filters.search}"`,
+      icon: 'fa-solid fa-magnifying-glass'
+    });
+  }
+
+  const anomEl = document.getElementById('filterAnomalyOnly');
+  const anomActive = !!(state.filters.anomaly_only);
+  toggleControlActive(anomEl, anomActive);
+  if (anomActive) {
+    chips.push({
+      key: 'anomaly_only',
+      label: 'Filter',
+      value: 'Anomalies Only',
+      icon: 'fa-solid fa-triangle-exclamation'
+    });
+  }
+
+  const labEl = document.getElementById('filterLabPending');
+  const labActive = !!(state.filters.lab_pending_only);
+  toggleControlActive(labEl, labActive);
+  if (labActive) {
+    chips.push({
+      key: 'lab_pending_only',
+      label: 'Filter',
+      value: 'Lab Pending Only',
+      icon: 'fa-solid fa-hourglass-half'
+    });
+  }
+
+  const isCustomDate = !!(state.filterOptions && state.filters.date_from && state.filters.date_to &&
+    (state.filters.date_from !== state.filterOptions.min_date || state.filters.date_to !== state.filterOptions.max_date));
+  const wrapDate = document.getElementById('dateRangePickerWrap');
+  if (wrapDate) {
+    if (isCustomDate) wrapDate.classList.add('filter-active-control');
+    else wrapDate.classList.remove('filter-active-control');
+  }
+  if (isCustomDate) {
+    chips.push({
+      key: 'date_range',
+      label: 'Date Range',
+      value: `${formatDisplayDate(state.filters.date_from)} to ${formatDisplayDate(state.filters.date_to)}`,
+      icon: 'fa-regular fa-calendar'
+    });
+  }
+
+  if (chips.length === 0) {
+    bar.style.display = 'none';
+    bar.innerHTML = '';
+    return;
+  }
+
+  bar.style.display = 'flex';
+  bar.innerHTML = `
+    <span class="active-filters-label">
+      <i class="fa-solid fa-filter-circle-check"></i> Active Filters (${chips.length}):
+    </span>
+    ${chips.map(c => `
+      <span class="active-filter-chip">
+        <i class="${c.icon}" style="color: var(--mustard-gold); font-size: 0.75rem;"></i>
+        <span>${c.label}: <strong>${c.value}</strong></span>
+        <button class="btn-chip-remove" onclick="clearGlobalFilter('${c.key}')" title="Remove ${c.label} filter">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </span>
+    `).join('')}
+    <button class="btn-clear-all-chips" onclick="resetGlobalFilters()" title="Reset all global filters">
+      <i class="fa-solid fa-rotate-left"></i> Clear All (${chips.length})
+    </button>
+  `;
+}
+
+function clearGlobalFilter(key) {
+  if (key === 'supervisor') {
+    const el = document.getElementById('filterSupervisor');
+    if (el) el.value = '';
+  } else if (key === 'supplier') {
+    const el = document.getElementById('filterSupplier');
+    if (el) el.value = '';
+  } else if (key === 'station') {
+    const el = document.getElementById('filterStation');
+    if (el) el.value = '';
+  } else if (key === 'search') {
+    const el = document.getElementById('filterSearch');
+    if (el) el.value = '';
+  } else if (key === 'anomaly_only') {
+    const el = document.getElementById('filterAnomalyOnly');
+    if (el) el.checked = false;
+  } else if (key === 'lab_pending_only') {
+    const el = document.getElementById('filterLabPending');
+    if (el) el.checked = false;
+  } else if (key === 'date_range') {
+    if (state.filterOptions) {
+      const elFrom = document.getElementById('filterDateFrom');
+      const elTo = document.getElementById('filterDateTo');
+      if (elFrom) elFrom.value = state.filterOptions.min_date || '';
+      if (elTo) elTo.value = state.filterOptions.max_date || '';
+    }
+  }
+  readFiltersFromUI();
+  state.pagination.page = 1;
+  refreshActiveView();
+}
+
+function resetGlobalFilters() {
+  resetFiltersUI();
+  state.pagination.page = 1;
+  refreshActiveView();
+}
+
+window.clearGlobalFilter = clearGlobalFilter;
+window.resetGlobalFilters = resetGlobalFilters;
 
 function buildQueryString(extraParams = {}) {
   const params = new URLSearchParams();
@@ -2838,23 +3010,7 @@ function setupDebitNoteEventListeners() {
   const btnReset = document.getElementById('btnDnReset');
   if (btnReset) {
     btnReset.addEventListener('click', () => {
-      if (document.getElementById('dnLotSearch')) document.getElementById('dnLotSearch').value = '';
-      if (document.getElementById('dnLotStatusFilter')) document.getElementById('dnLotStatusFilter').value = '';
-      if (document.getElementById('dnLotOutcomeFilter')) document.getElementById('dnLotOutcomeFilter').value = '';
-      if (document.getElementById('dnLotOilFilter')) document.getElementById('dnLotOilFilter').value = '';
-      if (document.getElementById('dnLotStationFilter')) document.getElementById('dnLotStationFilter').value = '';
-      if (document.getElementById('dnLotSortBy')) document.getElementById('dnLotSortBy').value = 's_no_asc';
-
-      state.dnPagination.search = '';
-      state.dnPagination.status = '';
-      state.dnPagination.outcome = '';
-      state.dnPagination.oilRange = '';
-      state.dnPagination.station = '';
-      state.dnPagination.sortBy = 's_no';
-      state.dnPagination.sortOrder = 'asc';
-      state.dnPagination.page = 1;
-
-      loadDebitNoteRecords();
+      resetAllDnFilters();
     });
   }
 
@@ -3184,7 +3340,171 @@ async function loadDebitNoteStations() {
   }
 }
 
+function renderDnActiveFiltersBar() {
+  const bar = document.getElementById('dnActiveFiltersBar');
+  if (!bar) return;
+
+  const chips = [];
+
+  const toggleControl = (id, isActive) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (isActive) {
+      el.classList.add('filter-active-control');
+    } else {
+      el.classList.remove('filter-active-control');
+    }
+  };
+
+  const searchActive = !!(state.dnPagination.search && state.dnPagination.search.trim());
+  toggleControl('dnLotSearch', searchActive);
+  if (searchActive) {
+    chips.push({
+      key: 'search',
+      label: 'Search',
+      value: `"${state.dnPagination.search}"`,
+      icon: 'fa-solid fa-magnifying-glass'
+    });
+  }
+
+  const statusActive = !!(state.dnPagination.status);
+  toggleControl('dnLotStatusFilter', statusActive);
+  if (statusActive) {
+    let statusText = state.dnPagination.status;
+    if (statusText === 'Matched') statusText = 'Verified Lots';
+    else if (statusText === 'Oil Discrepancy Flagged') statusText = 'Oil Mismatch Flagged';
+    else if (statusText === 'lab_pending') statusText = 'Lab Pending / Awaiting';
+    chips.push({
+      key: 'status',
+      label: 'Status',
+      value: statusText,
+      icon: 'fa-solid fa-clipboard-check'
+    });
+  }
+
+  const outcomeActive = !!(state.dnPagination.outcome);
+  toggleControl('dnLotOutcomeFilter', outcomeActive);
+  if (outcomeActive) {
+    let outcomeText = state.dnPagination.outcome;
+    if (outcomeText === 'loss') outcomeText = 'Quality Loss (+₹)';
+    else if (outcomeText === 'profit') outcomeText = 'Quality Profit (-₹)';
+    else if (outcomeText === 'even') outcomeText = 'No Profit - No Loss (₹0)';
+    else if (outcomeText === 'moderate_loss') outcomeText = 'Moderate Loss (₹0 - ₹200)';
+    else if (outcomeText === 'heavy_loss') outcomeText = 'High Loss (> ₹200)';
+    chips.push({
+      key: 'outcome',
+      label: 'Outcome',
+      value: outcomeText,
+      icon: 'fa-solid fa-scale-balanced'
+    });
+  }
+
+  const oilActive = !!(state.dnPagination.oilRange);
+  toggleControl('dnLotOilFilter', oilActive);
+  if (oilActive) {
+    let oilText = state.dnPagination.oilRange;
+    if (oilText === 'above_benchmark') oilText = '42%+ Benchmark Oil';
+    else if (oilText === 'near_benchmark') oilText = '40% - 42% Oil';
+    else if (oilText === 'sub_benchmark') oilText = '38% - 40% Oil';
+    else if (oilText === 'low') oilText = 'Under 38% Low Oil';
+    chips.push({
+      key: 'oil',
+      label: 'Oil Content',
+      value: oilText,
+      icon: 'fa-solid fa-flask-vial'
+    });
+  }
+
+  const stationActive = !!(state.dnPagination.station);
+  toggleControl('dnLotStationFilter', stationActive);
+  if (stationActive) {
+    chips.push({
+      key: 'station',
+      label: 'Mandi',
+      value: state.dnPagination.station,
+      icon: 'fa-solid fa-location-dot'
+    });
+  }
+
+  if (chips.length === 0) {
+    bar.style.display = 'none';
+    bar.innerHTML = '';
+    return;
+  }
+
+  bar.style.display = 'flex';
+  bar.innerHTML = `
+    <span class="active-filters-label">
+      <i class="fa-solid fa-filter-circle-check"></i> Applied Filters (${chips.length}):
+    </span>
+    ${chips.map(c => `
+      <span class="active-filter-chip">
+        <i class="${c.icon}" style="color: var(--mustard-gold); font-size: 0.75rem;"></i>
+        <span>${c.label}: <strong>${c.value}</strong></span>
+        <button class="btn-chip-remove" onclick="clearDnFilter('${c.key}')" title="Remove ${c.label} filter">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </span>
+    `).join('')}
+    <button class="btn-clear-all-chips" onclick="resetAllDnFilters()" title="Reset all table filters">
+      <i class="fa-solid fa-rotate-left"></i> Clear All (${chips.length})
+    </button>
+  `;
+}
+
+function clearDnFilter(key) {
+  if (key === 'search') {
+    const el = document.getElementById('dnLotSearch');
+    if (el) el.value = '';
+    state.dnPagination.search = '';
+  } else if (key === 'status') {
+    const el = document.getElementById('dnLotStatusFilter');
+    if (el) el.value = '';
+    state.dnPagination.status = '';
+  } else if (key === 'outcome') {
+    const el = document.getElementById('dnLotOutcomeFilter');
+    if (el) el.value = '';
+    state.dnPagination.outcome = '';
+  } else if (key === 'oil') {
+    const el = document.getElementById('dnLotOilFilter');
+    if (el) el.value = '';
+    state.dnPagination.oilRange = '';
+  } else if (key === 'station') {
+    const el = document.getElementById('dnLotStationFilter');
+    if (el) el.value = '';
+    state.dnPagination.station = '';
+  }
+  renderDnActiveFiltersBar();
+  state.dnPagination.page = 1;
+  loadDebitNoteRecords();
+}
+
+function resetAllDnFilters() {
+  if (document.getElementById('dnLotSearch')) document.getElementById('dnLotSearch').value = '';
+  if (document.getElementById('dnLotStatusFilter')) document.getElementById('dnLotStatusFilter').value = '';
+  if (document.getElementById('dnLotOutcomeFilter')) document.getElementById('dnLotOutcomeFilter').value = '';
+  if (document.getElementById('dnLotOilFilter')) document.getElementById('dnLotOilFilter').value = '';
+  if (document.getElementById('dnLotStationFilter')) document.getElementById('dnLotStationFilter').value = '';
+  if (document.getElementById('dnLotSortBy')) document.getElementById('dnLotSortBy').value = 's_no_asc';
+
+  state.dnPagination.search = '';
+  state.dnPagination.status = '';
+  state.dnPagination.outcome = '';
+  state.dnPagination.oilRange = '';
+  state.dnPagination.station = '';
+  state.dnPagination.sortBy = 's_no';
+  state.dnPagination.sortOrder = 'asc';
+  state.dnPagination.page = 1;
+
+  renderDnActiveFiltersBar();
+  loadDebitNoteRecords();
+}
+
+window.clearDnFilter = clearDnFilter;
+window.resetAllDnFilters = resetAllDnFilters;
+
 async function loadDebitNoteRecords() {
+  renderDnActiveFiltersBar();
   try {
     const isMt = state.unit === 'mt';
     const params = new URLSearchParams({
