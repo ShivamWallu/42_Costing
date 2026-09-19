@@ -5155,6 +5155,17 @@ async function openAuditDrilldown(type = 'all', page = 1, search = '') {
   try {
     const url = `/api/audit/drilldown?audit_type=${type}&page=${page}&limit=${auditDrilldownState.limit}&search=${encodeURIComponent(auditDrilldownState.search)}`;
     const res = await fetch(url);
+    if (!res.ok) {
+      const errText = await res.text();
+      let errorMsg = `HTTP Error ${res.status}`;
+      try {
+        const parsed = JSON.parse(errText);
+        if (parsed.detail) errorMsg = parsed.detail;
+      } catch (e) {
+        if (errText) errorMsg = errText.slice(0, 150);
+      }
+      throw new Error(errorMsg);
+    }
     const data = await res.json();
 
     auditDrilldownState.totalPages = data.pages || 1;

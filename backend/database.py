@@ -61,22 +61,26 @@ class PostgresCursorWrapper:
     def __init__(self, pg_cursor):
         self.cursor = pg_cursor
 
-    def _convert_query(self, query: str) -> str:
-        # Convert SQLite '?' placeholders to PostgreSQL '%s'
+    def _convert_query(self, query: str, has_params: bool = False) -> str:
+        if has_params:
+            # Escape literal '%' to '%%' first so psycopg2 doesn't interpret LIKE '%text%' as format specifiers
+            # Then convert SQLite '?' placeholders to PostgreSQL '%s'
+            return query.replace("%", "%%").replace("?", "%s")
         return query.replace("?", "%s")
 
     def execute(self, query: str, params=None):
-        pg_query = self._convert_query(query)
-        if params is not None:
+        if params is not None and len(params) > 0:
+            pg_query = self._convert_query(query, has_params=True)
             if isinstance(params, (list, tuple)):
                 return self.cursor.execute(pg_query, tuple(params))
             return self.cursor.execute(pg_query, (params,))
+        pg_query = self._convert_query(query, has_params=False)
         return self.cursor.execute(pg_query)
 
     def executemany(self, query: str, params_list):
-        pg_query = self._convert_query(query)
         if not params_list:
             return
+        pg_query = self._convert_query(query, has_params=True)
         if execute_batch is not None:
             return execute_batch(self.cursor, pg_query, params_list, page_size=1000)
         return self.cursor.executemany(pg_query, params_list)
