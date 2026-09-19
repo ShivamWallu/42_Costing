@@ -1012,9 +1012,13 @@ def get_debit_note_records(
     params = []
     
     if search:
-        where_clauses.append("(gin LIKE ? OR supplier_name LIKE ? OR po_no LIKE ? OR bill_no LIKE ? OR station LIKE ?)")
-        search_param = f"%{search.strip()}%"
-        params.extend([search_param, search_param, search_param, search_param, search_param])
+        s_clean = search.strip()
+        if s_clean.lower() in ["direct", "direct purchase", "direct purchases", "no broker"]:
+            where_clauses.append("(broker_name IS NULL OR broker_name = '' OR broker_name LIKE '%Direct%')")
+        else:
+            where_clauses.append("(gin LIKE ? OR supplier_name LIKE ? OR po_no LIKE ? OR bill_no LIKE ? OR station LIKE ? OR broker_name LIKE ?)")
+            search_param = f"%{s_clean}%"
+            params.extend([search_param, search_param, search_param, search_param, search_param, search_param])
         
     if status:
         if status in ["lab_pending", "pending", "Lab Pending"]:

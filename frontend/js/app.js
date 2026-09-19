@@ -5277,18 +5277,20 @@ function renderAuditDrilldownContent(data) {
 
   // 4. Action Button for Transactions Tab
   let hubButtonText = 'Open in Full Transactions Hub';
-  let hubIcon = 'fa-solid fa-arrow-up-right-from-square';
+  // 4. Action Button for Transactions Tab
+  let hubButtonText = 'View in 42% Costing Table';
+  let hubIcon = 'fa-solid fa-table-list';
   let hubBtnClass = 'btn-primary';
   if (audit_type === 'lab_pending') {
-    hubButtonText = 'Filter Pending in Transactions Hub';
-    hubIcon = 'fa-solid fa-filter';
+    hubButtonText = 'Filter Lab Pending in 42% Costing Table';
+    hubIcon = 'fa-solid fa-flask-vial';
     hubBtnClass = 'btn-warning';
   } else if (audit_type === 'stations_normalized') {
-    hubButtonText = 'View in Transactions Hub';
-    hubIcon = 'fa-solid fa-arrow-up-right-from-square';
+    hubButtonText = 'View Lots in 42% Costing Table';
+    hubIcon = 'fa-solid fa-map-location-dot';
     hubBtnClass = 'btn-secondary';
   } else if (audit_type === 'direct_purchases') {
-    hubButtonText = 'View Direct in Transactions Hub';
+    hubButtonText = 'View Direct Purchases in 42% Costing Table';
     hubIcon = 'fa-solid fa-handshake';
     hubBtnClass = 'btn-info';
   }
@@ -5303,7 +5305,7 @@ function renderAuditDrilldownContent(data) {
       }
 
       let brokerDisplay = r.broker_name || '—';
-      if (!r.broker_original || r.broker_name === 'Direct' || r.broker_name === 'Direct / Local') {
+      if (!r.broker_original || r.broker_name === 'Direct' || r.broker_name === 'Direct / Local' || r.broker_name === 'Direct Purchase (No Broker)') {
         brokerDisplay = `<span class="badge badge-success" style="font-size: 0.72rem; padding: 2px 7px;"><i class="fa-solid fa-check"></i> Direct</span>`;
       }
 
@@ -5333,16 +5335,16 @@ function renderAuditDrilldownContent(data) {
 
       return `
         <tr>
-          <td style="font-size: 0.82rem; white-space: nowrap; color: var(--text-secondary); padding: 10px 12px;">${r.gin_date || '—'}</td>
-          <td style="font-size: 0.82rem; font-weight: 600; font-family: monospace; color: var(--accent-blue); white-space: nowrap; padding: 10px 12px;">${r.grn_no || r.gin || '—'}</td>
-          <td style="font-size: 0.84rem; font-weight: 600; min-width: 200px; max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 10px 12px;" title="${r.supplier_name}">${r.supplier_name || '—'}</td>
-          <td style="font-size: 0.82rem; white-space: nowrap; padding: 10px 12px;">${mandiDisplay}</td>
-          <td style="font-size: 0.82rem; white-space: nowrap; padding: 10px 12px;">${brokerDisplay}</td>
-          <td style="font-size: 0.84rem; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; padding: 10px 12px; font-weight: 500;">${r.bill_wt ? r.bill_wt.toFixed(2) : '—'}</td>
-          <td style="font-size: 0.84rem; text-align: right; white-space: nowrap; padding: 10px 12px;" class="td-col-rate"><span class="badge-rate" style="font-size:0.80rem; padding:3px 8px; font-weight: 600;"><i class="fa-solid fa-cart-shopping" style="font-size:0.72rem; opacity:0.85;"></i> ₹${r.actual_rate ? r.actual_rate.toFixed(2) : '—'}</span></td>
-          <td style="font-size: 0.82rem; text-align: center; white-space: nowrap; padding: 10px 12px;">${nirDisplay}</td>
-          <td style="font-size: 0.82rem; text-align: center; white-space: nowrap; padding: 10px 12px;">${axDisplay}</td>
-          <td style="font-size: 0.84rem; text-align: right; white-space: nowrap; padding: 10px 12px;" class="td-col-cost42"><span class="badge-cost42" style="font-size:0.82rem; padding:3px 8px; font-weight: 700;"><i class="fa-solid fa-star" style="font-size:0.72rem; color:#f59e0b;"></i> ${cost42Display}</span></td>
+          <td style="font-size: 0.82rem; white-space: nowrap; color: var(--text-secondary); padding: 9px 10px;">${r.gin_date || '—'}</td>
+          <td style="font-size: 0.82rem; font-weight: 600; font-family: monospace; color: var(--accent-blue); white-space: nowrap; padding: 9px 10px;">${r.grn_no || r.gin || '—'}</td>
+          <td style="font-size: 0.83rem; font-weight: 600; min-width: 180px; max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 9px 10px;" title="${r.supplier_name}">${r.supplier_name || '—'}</td>
+          <td style="font-size: 0.82rem; white-space: nowrap; padding: 9px 10px;">${mandiDisplay}</td>
+          <td style="font-size: 0.82rem; white-space: nowrap; padding: 9px 10px;">${brokerDisplay}</td>
+          <td style="font-size: 0.83rem; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; padding: 9px 10px; font-weight: 500;">${r.bill_wt ? r.bill_wt.toFixed(2) : '—'}</td>
+          <td style="font-size: 0.83rem; text-align: right; white-space: nowrap; padding: 9px 10px;" class="td-col-rate"><span class="badge-rate" style="font-size:0.78rem; padding:3px 7px; font-weight: 600;"><i class="fa-solid fa-cart-shopping" style="font-size:0.70rem; opacity:0.85;"></i> ₹${r.actual_rate ? r.actual_rate.toFixed(2) : '—'}</span></td>
+          <td style="font-size: 0.82rem; text-align: center; white-space: nowrap; padding: 9px 10px;">${nirDisplay}</td>
+          <td style="font-size: 0.82rem; text-align: center; white-space: nowrap; padding: 9px 10px;">${axDisplay}</td>
+          <td style="font-size: 0.83rem; text-align: right; white-space: nowrap; padding: 9px 24px 9px 10px;" class="td-col-cost42"><span class="badge-cost42" style="font-size:0.80rem; padding:3px 8px; font-weight: 700;"><i class="fa-solid fa-star" style="font-size:0.70rem; color:#f59e0b;"></i> ${cost42Display}</span></td>
         </tr>
       `;
     }).join('');
@@ -5387,20 +5389,20 @@ function renderAuditDrilldownContent(data) {
     </div>
 
     <!-- Data Table Container -->
-    <div class="table-responsive" style="max-height: 520px; overflow-y: auto; overflow-x: auto; border: 1px solid var(--border-subtle); border-radius: 10px; box-shadow: inset 0 0 4px rgba(0,0,0,0.05);">
-      <table class="data-table" style="width: 100%; min-width: 1150px; margin: 0; font-size: 0.83rem;">
+    <div class="table-responsive" style="max-height: 520px; overflow-y: auto; overflow-x: auto; border: 1px solid var(--border-subtle); border-radius: 10px; box-shadow: inset 0 0 4px rgba(0,0,0,0.05); padding-right: 2px;">
+      <table class="data-table" style="width: 100%; min-width: 1180px; margin: 0; font-size: 0.83rem;">
         <thead style="position: sticky; top: 0; z-index: 2; background: var(--bg-card);">
           <tr>
-            <th style="padding: 10px 12px; white-space: nowrap;">Date</th>
-            <th style="padding: 10px 12px; white-space: nowrap;">GRN / GIN</th>
-            <th style="padding: 10px 12px; white-space: nowrap; min-width: 200px;">Supplier</th>
-            <th style="padding: 10px 12px; white-space: nowrap;">Mandi / Station</th>
-            <th style="padding: 10px 12px; white-space: nowrap;">Broker</th>
-            <th style="padding: 10px 12px; text-align: right; white-space: nowrap;">Net Wt (Qtl)</th>
-            <th class="th-col-rate" style="padding: 10px 12px; text-align: right; white-space: nowrap;"><i class="fa-solid fa-cart-shopping" style="font-size:0.75rem; margin-right:4px;"></i> Purchase Rate (₹)</th>
-            <th class="th-col-oil" style="padding: 10px 12px; text-align: center; white-space: nowrap;">Tested Oil %</th>
-            <th class="th-col-rate" style="padding: 10px 12px; text-align: center; white-space: nowrap;">NIR Oil %</th>
-            <th class="th-col-cost42" style="padding: 10px 12px; text-align: right; white-space: nowrap;"><i class="fa-solid fa-star" style="font-size:0.75rem; margin-right:4px;"></i> 42% Standard Cost (₹)</th>
+            <th style="padding: 10px 10px; white-space: nowrap; width: 95px;">Date</th>
+            <th style="padding: 10px 10px; white-space: nowrap; width: 130px;">GRN / GIN</th>
+            <th style="padding: 10px 10px; white-space: nowrap; min-width: 180px;">Supplier</th>
+            <th style="padding: 10px 10px; white-space: nowrap; width: 130px;">Mandi / Station</th>
+            <th style="padding: 10px 10px; white-space: nowrap; width: 95px;">Broker</th>
+            <th style="padding: 10px 10px; text-align: right; white-space: nowrap; width: 95px;">Net Wt (Qtl)</th>
+            <th class="th-col-rate" style="padding: 10px 10px; text-align: right; white-space: nowrap; width: 125px;"><i class="fa-solid fa-cart-shopping" style="font-size:0.75rem; margin-right:4px;"></i> Purchase Rate</th>
+            <th class="th-col-oil" style="padding: 10px 10px; text-align: center; white-space: nowrap; width: 100px;">Tested Oil %</th>
+            <th class="th-col-rate" style="padding: 10px 10px; text-align: center; white-space: nowrap; width: 100px;">NIR Oil %</th>
+            <th class="th-col-cost42" style="padding: 10px 24px 10px 10px; text-align: right; white-space: nowrap; width: 155px;"><i class="fa-solid fa-star" style="font-size:0.75rem; margin-right:4px;"></i> 42% Cost (₹)</th>
           </tr>
         </thead>
         <tbody>
@@ -5445,21 +5447,59 @@ function closeAuditDrilldownModal() {
 
 function navigateToTransactionsFromAudit(type) {
   closeAuditDrilldownModal();
-  switchTab('employee-hub');
+  switchTab('debit-note-analysis');
 
-  if (type === 'lab_pending') {
-    const chk = document.getElementById('filterLabPending');
-    if (chk) chk.checked = true;
-    const anomChk = document.getElementById('filterAnomaly');
-    if (anomChk) anomChk.checked = false;
-    applyFilters();
-  } else if (type === 'all') {
-    resetFilters();
-  } else if (type === 'direct_purchases') {
-    const searchInput = document.getElementById('filterSearch');
-    if (searchInput) searchInput.value = 'Direct';
-    applyFilters();
+  // Activate the "Lots" subtab
+  const btnLots = document.getElementById('btnSubtabLots');
+  if (btnLots) {
+    document.querySelectorAll('.dn-subtab').forEach(b => {
+      b.classList.remove('active', 'btn-primary');
+      b.classList.add('btn-secondary');
+    });
+    btnLots.classList.add('active', 'btn-primary');
+    btnLots.classList.remove('btn-secondary');
+
+    document.querySelectorAll('.dn-content-section').forEach(sec => sec.classList.remove('active'));
+    const secLots = document.getElementById('dnSectionLots');
+    if (secLots) secLots.classList.add('active');
   }
+
+  // Reset dropdown filters
+  if (document.getElementById('dnLotStatusFilter')) document.getElementById('dnLotStatusFilter').value = '';
+  if (document.getElementById('dnLotOutcomeFilter')) document.getElementById('dnLotOutcomeFilter').value = '';
+  if (document.getElementById('dnLotOilFilter')) document.getElementById('dnLotOilFilter').value = '';
+  if (document.getElementById('dnLotStationFilter')) document.getElementById('dnLotStationFilter').value = '';
+  if (document.getElementById('dnLotSortBy')) document.getElementById('dnLotSortBy').value = 's_no_asc';
+
+  state.dnPagination.search = '';
+  state.dnPagination.status = '';
+  state.dnPagination.outcome = '';
+  state.dnPagination.oilRange = '';
+  state.dnPagination.station = '';
+  state.dnPagination.sortBy = 's_no';
+  state.dnPagination.sortOrder = 'asc';
+  state.dnPagination.page = 1;
+
+  if (type === 'direct_purchases') {
+    const searchInp = document.getElementById('dnLotSearch');
+    if (searchInp) searchInp.value = 'Direct';
+    state.dnPagination.search = 'Direct';
+  } else if (type === 'lab_pending') {
+    const statusSel = document.getElementById('dnLotStatusFilter');
+    if (statusSel) statusSel.value = 'lab_pending';
+    state.dnPagination.status = 'lab_pending';
+  } else if (type === 'stations_normalized') {
+    const searchInp = document.getElementById('dnLotSearch');
+    if (searchInp) searchInp.value = '';
+  }
+
+  loadDebitNoteRecords();
+
+  // Smooth scroll to the table
+  setTimeout(() => {
+    const tableEl = document.getElementById('tableDnLots') || document.getElementById('dnSectionLots');
+    if (tableEl) tableEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 150);
 }
 
 // ==============================================================================
