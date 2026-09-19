@@ -110,7 +110,10 @@ def get_kpis(
     station: Optional[str] = None,
     broker: Optional[str] = None,
     date_from: Optional[str] = None,
-    date_to: Optional[str] = None
+    date_to: Optional[str] = None,
+    search: Optional[str] = None,
+    anomaly_only: Optional[bool] = False,
+    lab_pending_only: Optional[bool] = False
 ):
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -135,6 +138,18 @@ def get_kpis(
     if date_to:
         where_parts.append("date <= ?")
         params.append(date_to)
+    if anomaly_only:
+        where_parts.append("(oil_analyzer_by < 39.0 OR (cost_42_qtl - billed_rate_qtl) >= 200.0 OR net_ded > 75000.0 OR status != 'Matched')")
+    if lab_pending_only:
+        where_parts.append("(cost_42_qtl IS NULL OR oil_nir IS NULL OR oil_analyzer_by IS NULL OR oil_analyzer_by <= 0 OR status = 'Lab Data Not Available' OR status LIKE '%Pending%')")
+    if search and search.strip():
+        s_clean = search.strip()
+        if s_clean.lower() in ["direct", "direct purchase", "direct purchases", "no broker"]:
+            where_parts.append("(broker_name IS NULL OR broker_name = '' OR broker_name LIKE '%Direct%')")
+        else:
+            where_parts.append("(gin LIKE ? OR supplier_name LIKE ? OR po_no LIKE ? OR bill_no LIKE ? OR station LIKE ? OR broker_name LIKE ?)")
+            search_param = f"%{s_clean}%"
+            params.extend([search_param, search_param, search_param, search_param, search_param, search_param])
 
     where_sql = ("WHERE " + " AND ".join(where_parts)) if where_parts else ""
 
@@ -415,8 +430,15 @@ def get_station_analytics():
 
 @app.get("/api/analytics/trends")
 def get_costing_trends(
+    supervisor: Optional[str] = None,
+    supplier: Optional[str] = None,
+    station: Optional[str] = None,
+    broker: Optional[str] = None,
     date_from: Optional[str] = None,
-    date_to: Optional[str] = None
+    date_to: Optional[str] = None,
+    search: Optional[str] = None,
+    anomaly_only: Optional[bool] = False,
+    lab_pending_only: Optional[bool] = False
 ):
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -429,12 +451,36 @@ def get_costing_trends(
         "oil_nir > 10"
     ]
     params = []
+    if supervisor:
+        where_parts.append("supervisor_name = ?")
+        params.append(supervisor)
+    if supplier:
+        where_parts.append("supplier_name = ?")
+        params.append(supplier)
+    if station:
+        where_parts.append("station = ?")
+        params.append(station)
+    if broker:
+        where_parts.append("broker_name = ?")
+        params.append(broker)
     if date_from:
         where_parts.append("date >= ?")
         params.append(date_from)
     if date_to:
         where_parts.append("date <= ?")
         params.append(date_to)
+    if anomaly_only:
+        where_parts.append("(oil_analyzer_by < 39.0 OR (cost_42_qtl - billed_rate_qtl) >= 200.0 OR net_ded > 75000.0 OR status != 'Matched')")
+    if lab_pending_only:
+        where_parts.append("(cost_42_qtl IS NULL OR oil_nir IS NULL OR oil_analyzer_by IS NULL OR oil_analyzer_by <= 0 OR status = 'Lab Data Not Available' OR status LIKE '%Pending%')")
+    if search and search.strip():
+        s_clean = search.strip()
+        if s_clean.lower() in ["direct", "direct purchase", "direct purchases", "no broker"]:
+            where_parts.append("(broker_name IS NULL OR broker_name = '' OR broker_name LIKE '%Direct%')")
+        else:
+            where_parts.append("(gin LIKE ? OR supplier_name LIKE ? OR po_no LIKE ? OR bill_no LIKE ? OR station LIKE ? OR broker_name LIKE ?)")
+            search_param = f"%{s_clean}%"
+            params.extend([search_param, search_param, search_param, search_param, search_param, search_param])
     where_sql = " AND ".join(where_parts)
 
     query = f"""

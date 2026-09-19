@@ -727,34 +727,38 @@ async function loadKPIs() {
     const mult = state.unit === 'mt' ? 10.0 : 1.0;
     const unitSuffix = state.unit === 'mt' ? '/ MT' : '/ Qtl';
 
-    const recWtQtl = kpi.total_rec_wt_qtl || kpi.total_weight_qtl;
-    const recWtMt = kpi.total_rec_wt_mt || (recWtQtl / 10.0);
-    const billWtQtl = kpi.total_bill_wt_qtl || 419311.64;
+    const recWtQtl = kpi.total_rec_wt_qtl !== undefined ? (kpi.total_rec_wt_qtl || 0) : (kpi.total_weight_qtl || 0);
+    const recWtMt = kpi.total_rec_wt_mt !== undefined ? (kpi.total_rec_wt_mt || 0) : (recWtQtl / 10.0);
+    const billWtQtl = kpi.total_bill_wt_qtl !== undefined ? (kpi.total_bill_wt_qtl || 0) : (recWtQtl || 0);
 
     const volText = state.unit === 'mt'
       ? `${recWtMt.toLocaleString('en-IN', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} MT`
       : `${recWtQtl.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} Qtl`;
 
     const volParts = volText.split(' ');
-    document.getElementById('kpiVolume').innerHTML = `${volParts[0]} <span class="kpi-unit">${volParts[1] || 'Qtl'}</span>`;
+    const elVol = document.getElementById('kpiVolume');
+    if (elVol) elVol.innerHTML = `${volParts[0]} <span class="kpi-unit">${volParts[1] || 'Qtl'}</span>`;
     const volSub = document.getElementById('kpiVolumeSubtext');
     if (volSub) {
       volSub.innerHTML = `<span>Billed Wt: <strong>${billWtQtl.toLocaleString('en-IN', { maximumFractionDigits: 0 })} Qtl</strong></span>`;
     }
 
-    const rateVal = (kpi.avg_actual_rate || 7568.04) * mult;
-    document.getElementById('kpiActualRate').innerHTML = `₹${rateVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span class="kpi-unit">${unitSuffix}</span>`;
+    const rateVal = (kpi.avg_actual_rate || 0) * mult;
+    const elRate = document.getElementById('kpiActualRate');
+    if (elRate) elRate.innerHTML = `₹${rateVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span class="kpi-unit">${unitSuffix}</span>`;
 
-    const oilVal = kpi.avg_oil_manual || 39.78;
-    document.getElementById('kpiOilManual').innerHTML = `${oilVal.toFixed(2)}%`;
+    const oilVal = kpi.avg_oil_manual || 0;
+    const elOil = document.getElementById('kpiOilManual');
+    if (elOil) elOil.innerHTML = `${oilVal.toFixed(2)}%`;
 
-    const landingCostQtl = kpi.avg_landing_cost_qtl || 7295.97;
+    const landingCostQtl = kpi.avg_landing_cost_qtl || 0;
     const landingCostVal = landingCostQtl * mult;
-    const cost42Qtl = kpi.avg_cost_42 || 7703.14;
+    const cost42Qtl = kpi.avg_cost_42 || 0;
     const cost42Val = cost42Qtl * mult;
 
     // Card 4: 42% Benchmark Cost on Landing
-    document.getElementById('kpiCost42').innerHTML = `₹${cost42Val.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span class="kpi-unit">${unitSuffix}</span>`;
+    const elCost42 = document.getElementById('kpiCost42');
+    if (elCost42) elCost42.innerHTML = `₹${cost42Val.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span class="kpi-unit">${unitSuffix}</span>`;
     const delta = cost42Val - landingCostVal;
     const badge = document.getElementById('kpiCostDeltaBadge');
     if (badge) {
