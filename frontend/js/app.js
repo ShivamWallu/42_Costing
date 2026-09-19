@@ -3116,11 +3116,11 @@ function filterDebitNoteFromPill(filterType) {
 
   // 4. Switch to Debit Note & Costing tab (Direct UI activation for instant responsiveness)
   state.currentTab = 'debit-note-analysis';
-  document.querySelectorAll('.nav-tab').forEach(tab => {
-    tab.classList.toggle('active', tab.getAttribute('data-tab') === 'debit-note-analysis');
+  document.querySelectorAll('.nav-tab').forEach(t => {
+    t.classList.toggle('active', t.getAttribute('data-tab') === 'debit-note-analysis');
   });
-  document.querySelectorAll('.tab-content').forEach(c => {
-    c.classList.toggle('active', c.id === 'tab-debit-note-analysis');
+  document.querySelectorAll('.tab-view').forEach(view => {
+    view.classList.toggle('active', view.id === 'view-debit-note-analysis');
   });
 
   // 5. Activate 'lots' subtab
@@ -3156,10 +3156,12 @@ function filterDebitNoteFromPill(filterType) {
   loadDebitNoteKpis();
 
   // 8. Instant smooth scroll to the Debit Note table
-  const tableEl = document.getElementById('dnActiveFiltersBar') || document.getElementById('dnSectionLots') || document.getElementById('tableDebitNoteLots');
-  if (tableEl) {
-    tableEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
+  setTimeout(() => {
+    const tableEl = document.getElementById('dnActiveFiltersBar') || document.getElementById('dnSectionLots') || document.getElementById('tableDebitNoteLots');
+    if (tableEl) {
+      tableEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, 100);
 }
 
 window.filterDebitNoteFromPill = filterDebitNoteFromPill;
